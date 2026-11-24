@@ -27333,6 +27333,8 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('./sw.js').then(function(reg) {
                 console.log('[PWA] Service Worker registered:', reg.scope);
+                // Tự động kiểm tra và cập nhật phiên bản mới nhất ngay khi mở trang
+                reg.update();
             }).catch(function(err) {
                 console.warn('[PWA] Service Worker registration failed:', err);
             });
