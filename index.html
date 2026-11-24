@@ -15830,7 +15830,7 @@ function findVercelStudent(query) {
         const EXAM_Q_NUM_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?)?(\d+)/i;
         const EXAM_STEM_CLEAN_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question|bài|bai)\s*(?:số\s*)?\d+\s*[\.\:\-\)\/]?|\d+\s*[\.\)\:])\s*/i;
         const EXAM_SOLUTION_RE = /^\s*(?:lời\s+giải|hướng\s+dẫn(?:\s+giải)?|giải\s+thích|giải\s*[:\.]|bài\s+giải|gợi\s+ý)/i;
-        const EXAM_STOP_RE = /^\s*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:bảng\s+)?đáp\s+án(?:\s+(?:đề\s+kiểm\s+tra|tham\s+khảo|chi\s+tiết|đúng))?.*$|bảng\s+đáp\s+án.*$|hướng\s+dẫn\s+chấm.*$|hướng\s+dẫn\s+giải\s*$|thang\s+điểm.*$)/i;
+        const EXAM_STOP_RE = /^[\s\|\•\-\*]*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:(?:đề\s+kiểm\s+tra\s*\d*.*?)?[\s\|]+)?(?:bảng\s+)?đáp\s+án\b.*$|bảng\s+đáp\s+án.*$|hướng\s+dẫn\s+(?:giải|chấm).*$|lời\s+giải\s+chi\s+tiết.*$|thang\s+điểm.*$)/i;
         const EXAM_INSTRUCTION_RE = /^\s*(?:thí\s*sinh|mỗi\s*câu|trong\s*mỗi|câu\s+trắc\s+nghiệm|chỉ\s*chọn|lưu\s*ý|hướng\s*dẫn\s*làm)/i;
 
         // Trả về: 'mc' | 'tf' | 'sa' (dòng là tiêu đề phần), '' (tiêu đề phần nhưng chưa rõ dạng), null (không phải tiêu đề)
