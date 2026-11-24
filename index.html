@@ -1905,6 +1905,17 @@ body {
     color: #ffffff !important;
 }
 
+/* Ẩn hoàn toàn nút Cài đặt App khi ứng dụng đã được cài đặt trên thiết bị */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+    #btn-install-app, #btn-header-install {
+        display: none !important;
+    }
+}
+body.pwa-installed #btn-install-app,
+body.pwa-installed #btn-header-install {
+    display: none !important;
+}
+
 /* Dashboard Cards Elegance */
 #code83-home {
     background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
@@ -9450,13 +9461,23 @@ body {
             }
 
             function setSession(name) {
-                try { sessionStorage.setItem(SS_KEY, JSON.stringify({ fullName: name || '' })); } catch (e) {}
+                try {
+                    const val = JSON.stringify({ fullName: name || '', savedAt: Date.now() });
+                    localStorage.setItem(SS_KEY, val);
+                    sessionStorage.setItem(SS_KEY, val);
+                } catch (e) {}
             }
             function getSession() {
-                try { return JSON.parse(sessionStorage.getItem(SS_KEY) || 'null'); } catch (e) { return null; }
+                try {
+                    const raw = localStorage.getItem(SS_KEY) || sessionStorage.getItem(SS_KEY);
+                    return JSON.parse(raw || 'null');
+                } catch (e) { return null; }
             }
             function clearSession() {
-                try { sessionStorage.removeItem(SS_KEY); } catch (e) {}
+                try {
+                    localStorage.removeItem(SS_KEY);
+                    sessionStorage.removeItem(SS_KEY);
+                } catch (e) {}
             }
 
             return {
@@ -25085,7 +25106,34 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
 
     /* ==================== PWA INSTALLATION ENGINE ==================== */
     var deferredPrompt = null;
+
+    function checkPwaInstalled() {
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                           window.navigator.standalone === true ||
+                           document.referrer.includes('android-app://') ||
+                           localStorage.getItem('pwa_app_installed_v1') === 'true';
+
+        if (isStandalone) {
+            try { localStorage.setItem('pwa_app_installed_v1', 'true'); } catch (e) {}
+            document.body.classList.add('pwa-installed');
+            var btnSb = document.getElementById('btn-install-app');
+            if (btnSb) btnSb.style.setProperty('display', 'none', 'important');
+            var btnHdr = document.getElementById('btn-header-install');
+            if (btnHdr) btnHdr.style.setProperty('display', 'none', 'important');
+            return true;
+        }
+        return false;
+    }
+
+    // Kiểm tra ngay khi tải trang
+    checkPwaInstalled();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkPwaInstalled);
+    }
+    window.addEventListener('load', checkPwaInstalled);
+
     window.addEventListener('beforeinstallprompt', function(e) {
+        if (checkPwaInstalled()) return;
         e.preventDefault();
         deferredPrompt = e;
         console.log('[PWA] beforeinstallprompt captured');
@@ -25097,15 +25145,13 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
 
     window.addEventListener('appinstalled', function(e) {
         deferredPrompt = null;
+        try { localStorage.setItem('pwa_app_installed_v1', 'true'); } catch (e) {}
+        checkPwaInstalled();
         showAppToast('🎉 Cài đặt ứng dụng thành công!', 'success');
-        var btnSb = document.getElementById('btn-install-app');
-        if (btnSb) btnSb.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
     });
 
     window.installAppPwa = function() {
-        // Kiểm tra xem đã chạy dưới dạng App Standalone chưa
-        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        if (isStandalone) {
+        if (checkPwaInstalled()) {
             showAppToast('✅ Bạn đang chạy ứng dụng đã được cài đặt!', 'success');
             return;
         }
@@ -25123,12 +25169,13 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then(function(choiceResult) {
                 if (choiceResult.outcome === 'accepted') {
+                    try { localStorage.setItem('pwa_app_installed_v1', 'true'); } catch (e) {}
+                    checkPwaInstalled();
                     showAppToast('Đang cài đặt ứng dụng...', 'success');
                 }
                 deferredPrompt = null;
             });
         } else {
-            // Trường hợp trình duyệt chưa bắn event hoặc trên desktop Chrome/Edge đã có biểu tượng cài trên thanh URL
             showAppToast('💡 Để cài app: Bạn nhấn vào biểu tượng ➕ hoặc "Cài đặt" trên thanh địa chỉ trình duyệt!', 'info');
         }
     };
