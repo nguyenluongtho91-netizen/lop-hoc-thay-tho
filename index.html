@@ -1916,6 +1916,343 @@ body.pwa-installed #btn-header-install {
     display: none !important;
 }
 
+/* =====================================================================
+   LUXURY MOBILE APP DESIGN SYSTEM (body.layout-portrait)
+   Giao diện App di động chuyên nghiệp, thanh lịch, chuẩn iOS / Android
+   ===================================================================== */
+#btn-floating-back {
+    display: none !important;
+}
+
+#left-sidebar .side-btn.hidden,
+#left-sidebar .side-btn[hidden],
+body.is-student #left-sidebar .teacher-only-btn,
+body:not(.is-student) #left-sidebar #btn-student-class {
+    display: none !important;
+}
+
+body.layout-portrait:not(.printing-a4) {
+    background: #f1f5f9 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #app-wrapper {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px calc(env(safe-area-inset-bottom, 0px) + 14px) 10px !important;
+    gap: 10px !important;
+    box-sizing: border-box !important;
+}
+
+/* 1. Header / Profile Bar on Mobile */
+body.layout-portrait:not(.printing-a4) #left-sidebar {
+    width: 100% !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 6px 10px !important;
+    min-height: 44px !important;
+    gap: 8px !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #c99-wrap {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #c99-ring {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-role-label {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-role-label .rl-full {
+    display: none !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-role-label .rl-short {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2.5px 8px !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    border-radius: 6px !important;
+    background: #e0e7ff !important;
+    color: #4338ca !important;
+    letter-spacing: 0.02em !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-name {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+    margin: 0 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #user-class {
+    flex-shrink: 0 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-logout-ico {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: #fee2e2 !important;
+    color: #ef4444 !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    transition: transform 0.15s ease !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-logout-ico:active {
+    transform: scale(0.9) !important;
+}
+
+/* 2. Mobile Navigation Buttons (Horizontal Smooth Pill Bar) */
+body.layout-portrait:not(.printing-a4) #bottom-controls-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 8px !important;
+    margin-top: 0 !important;
+    padding: 3px 2px 4px 2px !important;
+}
+body.layout-portrait:not(.printing-a4) #bottom-controls-grid::-webkit-scrollbar {
+    display: none !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar .side-btn {
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 38px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 9999px !important;
+    white-space: nowrap !important;
+    letter-spacing: 0 !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    transition: all 0.15s ease !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar .side-btn:active {
+    transform: scale(0.95) !important;
+}
+
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-app-back {
+    background: #fff7ed !important;
+    border-color: #fed7aa !important;
+    color: #c2410c !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-go-home {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1d4ed8 !important;
+    width: auto !important;
+    padding: 0 14px !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-go-home .sb-txt {
+    display: inline !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-go-home .sb-ico {
+    display: inline-block !important;
+    margin: 0 !important;
+    width: 17px !important;
+    height: 17px !important;
+    color: #1d4ed8 !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-open-library {
+    background: #faf5ff !important;
+    border-color: #e9d5ff !important;
+    color: #7e22ce !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-bank {
+    background: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #b45309 !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-student-class {
+    background: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #15803d !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-class-manager {
+    background: #f0fdfa !important;
+    border-color: #99f6e4 !important;
+    color: #0f766e !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-class-manager .cm-desk {
+    display: none !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-class-manager .cm-mob {
+    display: inline !important;
+}
+body.layout-portrait:not(.printing-a4) #left-sidebar #btn-install-app {
+    background: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #047857 !important;
+}
+
+/* 3. Hero / Brand Banner on Mobile (`#right-header-box`) */
+body.layout-portrait:not(.printing-a4) #right-header-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 14px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #eff6ff 100%) !important;
+    border: 1px solid #bae6fd !important;
+    margin-bottom: 2px !important;
+}
+
+/* Hide duplicate back & install buttons in header on mobile */
+body.layout-portrait:not(.printing-a4) #right-header-box :is(#btn-header-back, #btn-header-install) {
+    display: none !important;
+}
+
+body.layout-portrait:not(.printing-a4) #header-brand-box {
+    gap: 12px !important;
+    width: 100% !important;
+}
+
+body.layout-portrait:not(.printing-a4) #quiz-subtitle {
+    font-size: 15.5px !important;
+    font-weight: 800 !important;
+    color: #0c4a6e !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+
+body.layout-portrait:not(.printing-a4) #header-brand-desc {
+    font-size: 11.5px !important;
+    color: #0284c7 !important;
+    margin-top: 2px !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+}
+
+body.layout-portrait:not(.printing-a4) #header-brand-desc span:first-child {
+    white-space: normal !important;
+}
+
+/* 4. Content Area on Mobile */
+body.layout-portrait:not(.printing-a4) #right-pane {
+    width: 100% !important;
+    height: auto !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+    padding: 10px !important;
+    overflow-y: auto !important;
+}
+
+body.layout-portrait:not(.printing-a4) #questions-container {
+    padding-right: 0 !important;
+    margin: 4px 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+}
+
+/* 5. Mobile Dashboard Cards */
+body.layout-portrait #code83-home {
+    padding: 4px 0 !important;
+    gap: 12px !important;
+}
+
+body.layout-portrait #code83-home .c83-top {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+}
+
+body.layout-portrait #code83-home .c83-card {
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+body.layout-portrait #code83-home .c83-bars {
+    min-height: 75px !important;
+    padding-bottom: 8px !important;
+}
+
+body.layout-portrait #code83-home .c83-recs {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+}
+
+body.layout-portrait #code83-home .c85-quick {
+    padding: 12px 16px !important;
+    border-radius: 16px !important;
+}
+
+body.layout-portrait #code83-home .c85-quick-tx b {
+    font-size: 15.5px !important;
+}
+
+body.layout-portrait #code83-home .c85-quick-tx small {
+    font-size: 12px !important;
+}
+
+body.layout-portrait:not(.printing-a4) .c83-orbit {
+    zoom: 0.82 !important;
+}
+
+
 /* Dashboard Cards Elegance */
 #code83-home {
     background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
@@ -2006,17 +2343,17 @@ body.pwa-installed #btn-header-install {
                     <span class="sb-txt">🏠 TRANG CHỦ</span>
                 </button>
                 <button id="btn-open-library" type="button" onclick="openLibrary()" class="side-btn bg-gradient-to-r from-purple-500 to-indigo-600">
-                    THƯ VIỆN
+                    📁 THƯ VIỆN
                 </button>
                 <!-- [CODE126] Máy tính: NGÂN HÀNG ĐỀ | Điện thoại: TỰ LUYỆN (cùng một nội dung, đồng bộ) -->
                 <button id="btn-bank" type="button" onclick="window.CODE126Bank &amp;&amp; CODE126Bank.open()" title="Ngân hàng đề / Tự luyện" class="side-btn bg-gradient-to-r from-amber-500 to-orange-600">
-                    <span class="bk-desk"><span class="bk-ico">📚 </span>NGÂN HÀNG ĐỀ</span><span class="bk-mob">TỰ LUYỆN</span>
+                    <span class="bk-desk"><span class="bk-ico">📚 </span>NGÂN HÀNG ĐỀ</span><span class="bk-mob">📝 TỰ LUYỆN</span>
                 </button>
                 <button id="btn-student-class" type="button" onclick="openStudentClasses()" class="hidden side-btn bg-gradient-to-r from-emerald-500 to-teal-600">
-                    LỚP HỌC
+                    🏫 LỚP HỌC
                 </button>
                 <button id="btn-class-manager" type="button" onclick="openClassManager()" class="side-btn teacher-only-btn bg-gradient-to-r from-teal-500 to-cyan-600">
-                    QUẢN LÍ LỚP HỌC
+                    <span class="cm-desk">👥 QUẢN LÍ LỚP HỌC</span><span class="cm-mob">👥 QUẢN LÍ LỚP</span>
                 </button>
                 <button id="btn-mix-sidebar" type="button" onclick="if (window.CODE93Mix) CODE93Mix.open()" title="Trộn đề thi thành nhiều mã đề" class="side-btn teacher-only-btn">
                     🔀 TRỘN ĐỀ THI
