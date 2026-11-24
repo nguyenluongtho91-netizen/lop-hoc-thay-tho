@@ -3211,7 +3211,8 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
             <div class="bg-white rounded-none w-full max-w-none h-full flex flex-col shadow-2xl relative overflow-hidden border-0">
                 <div class="px-6 py-4 bg-gradient-to-r from-emerald-600 to-green-700 flex justify-between items-center text-white shrink-0">
                     <div class="flex items-center gap-3">
-                        <h2 id="editor-title" class="text-xl font-black uppercase tracking-wide">Tạo &amp; Chỉnh Sửa Đề Thi (3 Phần)</h2>
+                        <h2 id="editor-title" class="text-xl font-black uppercase tracking-wide">Tạo &amp; Chỉnh Sửa Đề Thi (Hỗ trợ 4 Phần &amp; Tự Luận)</h2>
+                        <span id="editor-q-count-badge" class="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold tracking-normal"></span>
                         
                     </div>
                     <button type="button" onclick="closeEditor()" class="hover:bg-white/20 p-1.5 rounded-full transition-colors">
@@ -3307,6 +3308,8 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                                 <input id="edit-pts-tf" type="number" min="0" step="0.25" placeholder="Tự động" oninput="refreshScoringSummary()" class="w-24 bg-white border border-amber-300 rounded-lg px-2 py-1 text-sm font-black text-slate-900 outline-none focus:border-amber-600"></label>
                             <label class="flex items-center gap-1.5 text-xs font-black text-orange-800">Phần III
                                 <input id="edit-pts-sa" type="number" min="0" step="0.25" placeholder="Tự động" oninput="refreshScoringSummary()" class="w-24 bg-white border border-amber-300 rounded-lg px-2 py-1 text-sm font-black text-slate-900 outline-none focus:border-amber-600"></label>
+                            <label class="flex items-center gap-1.5 text-xs font-black text-purple-800">Phần IV
+                                <input id="edit-pts-tl" type="number" min="0" step="0.25" placeholder="Tự động" oninput="refreshScoringSummary()" class="w-24 bg-white border border-purple-300 rounded-lg px-2 py-1 text-sm font-black text-slate-900 outline-none focus:border-purple-600"></label>
                             <button type="button" onclick="autoFillScoring()" class="px-3 py-1.5 rounded-full font-black text-white bg-gradient-to-r from-amber-500 to-orange-600 text-xs uppercase active:scale-95">Tự động chia (BGD-ĐT)</button>
                             <button type="button" onclick="clearScoring()" class="px-3 py-1.5 rounded-full font-black text-amber-800 bg-white border border-amber-300 text-xs uppercase active:scale-95">Để trống</button>
                         </div>
@@ -3333,6 +3336,7 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-shq-mc" class="accent-amber-600" checked=""> Phần I</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-shq-tf" class="accent-amber-600" checked=""> Phần II</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-shq-sa" class="accent-amber-600" checked=""> Phần III</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-shq-tl" class="accent-amber-600" checked=""> Phần IV</label>
                             <span class="uppercase text-amber-900 ml-2">Đổi thứ tự đáp án:</span>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-sho-mc" class="accent-amber-600"> Phần I (A, B, C, D)</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="edit-sho-tf" class="accent-amber-600"> Phần II (ý a, b, c, d)</label>
@@ -3342,15 +3346,18 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
 
                 <div id="editor-scroll-area" class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 bg-slate-100">
                     <div id="editor-questions-container" class="space-y-4"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <button type="button" onclick="addEditorQuestion('mc')" class="w-full py-3 rounded-xl font-black text-blue-700 bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 uppercase text-xs tracking-wider transition-all">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        <button type="button" onclick="addEditorQuestion('mc')" class="w-full py-3 rounded-xl font-black text-blue-700 bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 uppercase text-xs tracking-wider transition-all shadow-sm">
                             + Phần I: Nhiều lựa chọn
                         </button>
-                        <button type="button" onclick="addEditorQuestion('tf')" class="w-full py-3 rounded-xl font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-2 border-dashed border-emerald-300 uppercase text-xs tracking-wider transition-all">
+                        <button type="button" onclick="addEditorQuestion('tf')" class="w-full py-3 rounded-xl font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-2 border-dashed border-emerald-300 uppercase text-xs tracking-wider transition-all shadow-sm">
                             + Phần II: Đúng - Sai
                         </button>
-                        <button type="button" onclick="addEditorQuestion('sa')" class="w-full py-3 rounded-xl font-black text-orange-700 bg-orange-50 hover:bg-orange-100 border-2 border-dashed border-orange-300 uppercase text-xs tracking-wider transition-all">
+                        <button type="button" onclick="addEditorQuestion('sa')" class="w-full py-3 rounded-xl font-black text-orange-700 bg-orange-50 hover:bg-orange-100 border-2 border-dashed border-orange-300 uppercase text-xs tracking-wider transition-all shadow-sm">
                             + Phần III: Trả lời ngắn
+                        </button>
+                        <button type="button" onclick="addEditorQuestion('tl')" class="w-full py-3 rounded-xl font-black text-purple-700 bg-purple-50 hover:bg-purple-100 border-2 border-dashed border-purple-400 uppercase text-xs tracking-wider transition-all shadow-sm">
+                            + Phần IV: Tự luận
                         </button>
                     </div>
                 </div>
@@ -8650,15 +8657,15 @@ function findVercelStudent(query) {
         const TF_LADDER = [0, 0.1, 0.25, 0.5, 1];
         // Cấu trúc đề tham khảo BGD-ĐT (tổng 10 điểm): Toán 12 + 4 + 6 câu = 3 + 4 + 3 điểm; các môn khác 18 + 4 + 6 câu = 4,5 + 4 + 1,5 điểm
         function standardWeights(subject) {
-            return /toán/i.test(subject || '') ? { mc: 3, tf: 4, sa: 3 } : { mc: 4.5, tf: 4, sa: 1.5 };
+            return /toán/i.test(subject || '') ? { mc: 3, tf: 4, sa: 3, tl: 2 } : { mc: 4.5, tf: 4, sa: 1.5, tl: 2 };
         }
         const _r2 = x => Math.round(x * 100) / 100;
 
         // Tính tổng điểm từng phần: ô nào người dùng bỏ trống -> tự chia phần điểm còn lại theo cấu trúc BGD-ĐT
         function computeEffectiveTotals(counts, scoring, subject) {
             const W = standardWeights(subject);
-            const types = ['mc', 'tf', 'sa'].filter(t => counts[t] > 0);
-            const totals = { mc: 0, tf: 0, sa: 0 };
+            const types = ['mc', 'tf', 'sa', 'tl'].filter(t => counts[t] > 0);
+            const totals = { mc: 0, tf: 0, sa: 0, tl: 0 };
             if (!types.length) return totals;
             let givenSum = 0;
             const blanks = [];
@@ -8727,8 +8734,8 @@ function findVercelStudent(query) {
         function computePartPer(list, scoring, subject) {
             const counts = countByType(list);
             const totals = computeEffectiveTotals(counts, scoring, subject);
-            const per = { mc: 0, tf: 0, sa: 0 };
-            ['mc', 'tf', 'sa'].forEach(t => {
+            const per = { mc: 0, tf: 0, sa: 0, tl: 0 };
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 const group = (list || []).filter(q => qType(q) === t);
                 if (!group.length) return;
                 let fixed = 0, free = 0;
@@ -9928,6 +9935,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             if (c.mc) arr.push(`Phần I: ${c.mc}`);
             if (c.tf) arr.push(`Phần II: ${c.tf}`);
             if (c.sa) arr.push(`Phần III: ${c.sa}`);
+            if (c.tl) arr.push(`Phần IV: ${c.tl}`);
             return arr.join(' • ');
         }
 
@@ -9951,7 +9959,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
 
         function buildPartsSummaryHtml(r) {
             if (!r || !r.parts) return '';
-            const rows = ['mc', 'tf', 'sa'].filter(t => r.parts[t].n > 0).map(t => {
+            const rows = ['mc', 'tf', 'sa', 'tl'].filter(t => r.parts[t] && r.parts[t].n > 0).map(t => {
                 const p = r.parts[t];
                 return `<span class="px-3.5 py-1 rounded-full bg-white/90 border border-indigo-200 text-indigo-900 text-[15px] font-black">Phần ${PART_META[t].roman}: ${p.full}/${p.n} câu đúng hoàn toàn • ${fmtPoints(p.earned)}/${fmtPoints(p.max)} điểm</span>`;
             });
@@ -13102,7 +13110,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
         // ============================================================
         function makeBlankDraft(type = 'mc') {
             return {
-                type: (type === 'tf' || type === 'sa') ? type : 'mc',
+                type: (type === 'tf' || type === 'sa' || type === 'tl') ? type : 'mc',
                 text: '',
                 options: [{ text: '' }, { text: '' }, { text: '' }, { text: '' }],
                 correctIndex: 0,
@@ -13204,6 +13212,8 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             } else if (t === 'sa') {
                 d.answer = String(q.shortAnswer == null ? '' : q.shortAnswer);
                 d.pts = _num(q.pts) > 0 ? _num(q.pts) : '';
+            } else if (t === 'tl') {
+                d.pts = _num(q.pts) > 0 ? _num(q.pts) : 1.0;
             } else {
                 d.pts = _num(q.pts) > 0 ? _num(q.pts) : '';
                 d.options = (q.options || []).map(o => ({ text: o.text }));
@@ -13273,7 +13283,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             syncEditorDOMToDraft();
             const d = editorDraftQuestions[idx];
             if (!d) return;
-            d.type = (newType === 'tf' || newType === 'sa') ? newType : 'mc';
+            d.type = (newType === 'tf' || newType === 'sa' || newType === 'tl') ? newType : 'mc';
             d._flash = true;
             renderEditorForm();
         }
@@ -13284,7 +13294,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
         function readEditorScoring() {
             const out = {};
             let any = false;
-            ['mc', 'tf', 'sa'].forEach(t => {
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 const el = document.getElementById('edit-pts-' + t);
                 const v = el ? parseFloat(String(el.value).replace(',', '.')) : NaN;
                 if (isFinite(v) && v > 0) { out[t] = v; any = true; } else out[t] = null;
@@ -13333,13 +13343,13 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
         function readEditorShuffle() {
             const chk = id => { const el = document.getElementById(id); return Boolean(el && el.checked); };
             return {
-                q: { mc: chk('edit-shq-mc'), tf: chk('edit-shq-tf'), sa: chk('edit-shq-sa') },
+                q: { mc: chk('edit-shq-mc'), tf: chk('edit-shq-tf'), sa: chk('edit-shq-sa'), tl: chk('edit-shq-tl') },
                 o: { mc: chk('edit-sho-mc'), tf: chk('edit-sho-tf') }
             };
         }
         function loadEditorSettings(topic) {
             const sc = (topic && topic.scoring) || {};
-            ['mc', 'tf', 'sa'].forEach(t => {
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 const el = document.getElementById('edit-pts-' + t);
                 if (el) el.value = (sc[t] != null && sc[t] !== '') ? sc[t] : '';
             });
@@ -13354,7 +13364,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             // [CODE115] đề mới (hoặc đề chưa từng cấu hình đảo) -> mặc định ĐẢO CÂU HỎI ở cả 3 phần
             const sh = (topic && topic.shuffle) || { q: { mc: true, tf: true, sa: true }, o: {} };
             const set = (id, v) => { const el = document.getElementById(id); if (el) el.checked = Boolean(v); };
-            set('edit-shq-mc', sh.q && sh.q.mc); set('edit-shq-tf', sh.q && sh.q.tf); set('edit-shq-sa', sh.q && sh.q.sa);
+            set('edit-shq-mc', sh.q && sh.q.mc); set('edit-shq-tf', sh.q && sh.q.tf); set('edit-shq-sa', sh.q && sh.q.sa); set('edit-shq-tl', sh.q && sh.q.tl !== false);
             set('edit-sho-mc', sh.o && sh.o.mc); set('edit-sho-tf', sh.o && sh.o.tf);
         }
         function refreshScoringSummary() {
@@ -13366,10 +13376,10 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             const list = (editorDraftQuestions || []).map(d => ({ type: qType(d), pts: d.pts, tfPts: d.tfPts }));
             const counts = countByType(list);
             const per = computePartPer(list, entered, subject);
-            const names = { mc: 'Phần I', tf: 'Phần II', sa: 'Phần III' };
+            const names = { mc: 'Phần I', tf: 'Phần II', sa: 'Phần III', tl: 'Phần IV' };
             const parts = [];
             let sum = 0;
-            ['mc', 'tf', 'sa'].forEach(t => {
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 if (!counts[t]) return;
                 const group = list.filter(q => qType(q) === t);
                 const partMax = group.reduce((acc, q) => acc + maxPointsFor(q, per, entered), 0);
@@ -13395,14 +13405,14 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
         function autoFillScoring() {
             const subject = (document.getElementById('edit-subject') || {}).value || '';
             const totals = computeEffectiveTotals(countByType(editorDraftQuestions || []), null, subject);
-            ['mc', 'tf', 'sa'].forEach(t => {
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 const el = document.getElementById('edit-pts-' + t);
                 if (el) el.value = totals[t] > 0 ? totals[t] : '';
             });
             refreshScoringSummary();
         }
         function clearScoring() {
-            ['mc', 'tf', 'sa'].forEach(t => { const el = document.getElementById('edit-pts-' + t); if (el) el.value = ''; });
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => { const el = document.getElementById('edit-pts-' + t); if (el) el.value = ''; });
             [0, 1, 2, 3].forEach(j => { const el = document.getElementById('edit-ty-' + j); if (el) el.value = ''; });
             [0, 1, 2, 3].forEach(j => { const el = document.getElementById('edit-tier-' + j); if (el) el.value = ''; });
             refreshScoringSummary();
@@ -13418,14 +13428,18 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             // [CODE33] số câu (theo từng phần) của mỗi nhóm để hiển thị
             const grpNums = {};
             {
-                const cc = { mc: 0, tf: 0, sa: 0 };
-                editorDraftQuestions.forEach(q => { const t = qType(q); cc[t]++; if (q.gid) (grpNums[q.gid] = grpNums[q.gid] || []).push(cc[t]); });
+                const cc = { mc: 0, tf: 0, sa: 0, tl: 0 };
+                editorDraftQuestions.forEach(q => { const t = qType(q); cc[t] = (cc[t] || 0) + 1; if (q.gid) (grpNums[q.gid] = grpNums[q.gid] || []).push(cc[t]); });
             }
             const cnt = countByType(editorDraftQuestions);
-            if (badge) badge.textContent = `${editorDraftQuestions.length} câu • I: ${cnt.mc} • II: ${cnt.tf} • III: ${cnt.sa}`;
+            if (badge) {
+                let btxt = `${editorDraftQuestions.length} câu • I: ${cnt.mc} • II: ${cnt.tf} • III: ${cnt.sa}`;
+                if (cnt.tl > 0) btxt += ` • IV: ${cnt.tl}`;
+                badge.textContent = btxt;
+            }
             container.innerHTML = '';
 
-            const counters = { mc: 0, tf: 0, sa: 0 };
+            const counters = { mc: 0, tf: 0, sa: 0, tl: 0 };
             let lastT = null;
             let flashIdx = -1;
 
@@ -13458,6 +13472,8 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                         body = `<div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">${[0, 1, 2, 3].map(o => `<div class="bg-white px-2 py-1 rounded border border-indigo-100 font-bold"><span class="text-indigo-700 font-black">${'ABCD'[o]}.</span> ${formatMathAndChemHTML(q.options[o]?.text || '')}</div>`).join('')}</div>`;
                     } else if (t === 'tf') {
                         body = `<div class="grid grid-cols-1 gap-1 pt-1">${[0, 1, 2, 3].map(o => `<div class="bg-white px-2 py-1 rounded border border-indigo-100 font-bold"><span class="text-indigo-700 font-black">${'abcd'[o]})</span> ${formatMathAndChemHTML(q.options[o]?.text || '')} <b class="${q.tf[o] ? 'text-emerald-700' : 'text-red-600'}">[${q.tf[o] ? 'Đúng' : 'Sai'}]</b></div>`).join('')}</div>`;
+                    } else if (t === 'tl') {
+                        body = `<div class="bg-purple-50 px-2 py-1 rounded border border-purple-200 font-bold text-purple-900">📝 Câu tự luận: ${formatMathAndChemHTML(q.text || '')}</div>`;
                     } else {
                         body = `<div class="bg-white px-2 py-1 rounded border border-indigo-100 font-bold">Trả lời: ${formatMathAndChemHTML(q.answer || '')}</div>`;
                     }
@@ -13490,6 +13506,12 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                                     <label class="flex items-center gap-1 text-xs font-black text-red-600 cursor-pointer"><input type="radio" name="edit-q-tf-${idx}-${j}" value="0" ${!q.tf[j] ? 'checked' : ''} class="accent-red-600"> Sai</label>
                                     <label class="flex items-center gap-1 text-xs font-black text-amber-800" title="Điểm riêng của ý này (để trống = dùng cài đặt chung)">Điểm <input type="number" min="0" step="0.05" inputmode="decimal" id="edit-q-typts-${idx}-${j}" value="${impEsc(String(q.tfPts && q.tfPts[j] != null ? q.tfPts[j] : ''))}" oninput="refreshScoringSummary()" placeholder="—" class="w-16 bg-white border border-amber-300 rounded-lg px-1.5 py-0.5 text-xs font-black text-slate-900 outline-none focus:border-amber-600"></label>
                                 </div>`).join('')}
+                        </div>`;
+                } else if (t === 'tl') {
+                    bodyHtml = `
+                        <div class="flex items-center gap-2 p-3 rounded-lg border bg-purple-50 border-purple-200 flex-wrap">
+                            <span class="text-xs font-black text-purple-900 uppercase">📝 Dạng câu hỏi: Tự luận</span>
+                            <span class="text-xs font-bold text-purple-700">(Học sinh làm bài tự luận bằng cách gõ trực tiếp hoặc chụp ảnh bài làm viết tay gửi lên)</span>
                         </div>`;
                 } else {
                     const empty = !String(q.answer || '').trim();
@@ -13568,6 +13590,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                                 <option value="mc" ${t === 'mc' ? 'selected' : ''}>Phần I – Nhiều lựa chọn</option>
                                 <option value="tf" ${t === 'tf' ? 'selected' : ''}>Phần II – Đúng / Sai</option>
                                 <option value="sa" ${t === 'sa' ? 'selected' : ''}>Phần III – Trả lời ngắn</option>
+                                <option value="tl" ${t === 'tl' ? 'selected' : ''}>Phần IV – Tự luận</option>
                             </select>
                             ${joinBtn}
                             <button type="button" onclick="removeEditorQuestion(${idx})" class="px-3 py-1 rounded-full text-xs font-black text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors">
@@ -14353,6 +14376,8 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                     d.tf = [0, 1, 2, 3].map(i => Boolean(q.tfAnswers && q.tfAnswers[i]));
                 } else if (t === 'sa') {
                     d.answer = String(q.shortAnswer || '');
+                } else if (t === 'tl') {
+                    d.pts = _num(q.pts) > 0 ? _num(q.pts) : 1.0;
                 } else {
                     d.options = q.options.map(o => ({ text: o.text }));
                     d.correctIndex = q.correctIndex || 0;
@@ -14378,7 +14403,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             closeWordImportModal();
 
             const c = countByType(editorDraftQuestions);
-            let msg = `Đã nạp ${importedFormatted.length} câu hỏi từ file ${label} vào bộ đề (Tổng cộng: ${editorDraftQuestions.length} câu: Phần I = ${c.mc}, Phần II = ${c.tf}, Phần III = ${c.sa}).`;
+            let msg = `Đã nạp ${importedFormatted.length} câu hỏi từ file ${label} vào bộ đề (Tổng cộng: ${editorDraftQuestions.length} câu: Phần I = ${c.mc}, Phần II = ${c.tf}, Phần III = ${c.sa}${c.tl > 0 ? `, Phần IV = ${c.tl}` : ''}).`;
             if (unresolved > 0) msg += ` ⚠ ${unresolved} câu chưa xác định đáp án đúng — hãy kiểm tra lại.`;
             if (emptyOpt > 0) msg += ` ⚠ ${emptyOpt} câu có phương án trống.`;
             showModal((unresolved || emptyOpt) ? 'Đã nạp – cần kiểm tra' : 'Thành công!', msg, (unresolved || emptyOpt) ? 'info' : 'success');
@@ -19136,6 +19161,19 @@ function parseExamRichLines(richLines) {
                         ...(_num(draft.pts) > 0 ? { pts: _num(draft.pts) } : {}),
                         correct: null
                     });
+                } else if (t === 'tl') {
+                    newQuestionsData.push({
+                        id: i + 1,
+                        type: 'tl',
+                        text: qText || `Câu hỏi tự luận ${i + 1}?`,
+                        options: [],
+                        ...solFieldsFromDraft(draft, 'tl'),
+                        ...groupFieldsFromDraft(draft),
+                        ...levelFieldsFromDraft(draft),
+                        ...(_num(draft.pts) > 0 ? { pts: _num(draft.pts) } : { pts: 1.0 }),
+                        detectedByStyle: true,
+                        correct: null
+                    });
                 } else {
                     const correctIndex = draft.correctIndex || 0;
                     const optTexts = [0, 1, 2, 3].map(j => (draft.options[j]?.text || '').trim() || '...');
@@ -19308,6 +19346,15 @@ function parseExamRichLines(richLines) {
                         shortAnswer: String(draft.answer || '').trim(),
                         ...solFieldsFromDraft(draft, 'sa'), ...groupFieldsFromDraft(draft), ...levelFieldsFromDraft(draft),
                         ...(_num(draft.pts) > 0 ? { pts: _num(draft.pts) } : {}),
+                        correct: null
+                    };
+                }
+                if (t === 'tl') {
+                    return {
+                        id: i + 1, type: 'tl', text: qText || `Câu hỏi tự luận ${i + 1}?`, options: [],
+                        ...solFieldsFromDraft(draft, 'tl'), ...groupFieldsFromDraft(draft), ...levelFieldsFromDraft(draft),
+                        ...(_num(draft.pts) > 0 ? { pts: _num(draft.pts) } : { pts: 1.0 }),
+                        detectedByStyle: true,
                         correct: null
                     };
                 }
@@ -20716,7 +20763,7 @@ function parseExamRichLines(richLines) {
             const sh = currentShuffle || { q: {}, o: {} };
             const LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
             const out = [];
-            ['mc', 'tf', 'sa'].forEach(t => {
+            ['mc', 'tf', 'sa', 'tl'].forEach(t => {
                 let group = base.filter(q => qType(q) === t);
                 if (sh.q && sh.q[t]) group = shuffleKeepingGroups(group);
                 out.push(...group);
