@@ -1,5 +1,5 @@
 // Service Worker cho Lớp Học Thầy Thọ PWA (v1.0)
-const CACHE_NAME = 'lophoc-thaytho-pwa-v2.5';
+const CACHE_NAME = 'lophoc-thaytho-pwa-v2.6';
 const STATIC_ASSETS = [
   './',
   './index.html',

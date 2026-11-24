@@ -13866,14 +13866,33 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                 grid.forEach(r => r.forEach(c => { if (c.t) allTexts.push(c.t); }));
                 if (!allTexts.length) return;
 
+                // [BẢNG NGANG DOCX] Dò bảng ngang (Row 1: Câu 1, 2... | Row 2: ĐA B, B...)
+                for (let ri = 0; ri < grid.length - 1; ri++) {
+                    const r1 = grid[ri].map(c => c.t).filter(Boolean);
+                    const r2 = grid[ri + 1].map(c => c.t).filter(Boolean);
+                    let colStart = 0;
+                    if (r1.length > 0 && isNaN(parseInt(r1[0], 10))) colStart = 1;
+                    let numCount = 0, mcCount = 0;
+                    for (let j = colStart; j < Math.min(r1.length, r2.length); j++) {
+                        if (/^\d+$/.test(r1[j])) numCount++;
+                        if (/^[A-D]$/i.test(r2[j])) mcCount++;
+                    }
+                    if (numCount >= 3 && mcCount >= 3) {
+                        for (let j = colStart; j < Math.min(r1.length, r2.length); j++) {
+                            const qn = parseInt(r1[j], 10);
+                            const letter = r2[j].toUpperCase();
+                            const aIdx = ['A', 'B', 'C', 'D'].indexOf(letter);
+                            if (!isNaN(qn) && aIdx !== -1) res.mc[qn] = aIdx;
+                        }
+                    }
+                }
+
                 const hasLenhHoi = allTexts.some(t => /^(?:lệnh\s*hỏi|ý|mệnh\s*đề)$/i.test(t));
                 const hasTfHeader = allTexts.some(t => /đ\/s|đúng\/sai/i.test(t));
                 const tfValCount = allTexts.filter(t => parseTfVal(t) !== null && t.length <= 4).length;
-                // Chữ hoa A, B, C, D (case sensitive)
                 const mcValCount = allTexts.filter(t => /^[A-D]$/.test(t)).length;
 
                 let tableType = null;
-                // ƯU TIÊN 1: TF phải xét trước vì cột lệnh hỏi có 'a','b','c','d'
                 if (hasLenhHoi || hasTfHeader || (tfValCount >= 4 && grid[0].length >= 5)) {
                     tableType = 'tf';
                 } else if (mcValCount >= 3) {
@@ -13917,31 +13936,12 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                                 if (!tfDict[curRight]) tfDict[curRight] = {};
                                 tfDict[curRight][moptr[1].toLowerCase()] = valr;
                             }
-                        } else if (r.length === 4) {
-                            const moptl = r[0].t.match(/([a-d])/i); const vall = parseTfVal(r[1].t);
+                        } else if (r.length >= 2) {
+                            const mql = r[0].t.match(/(\d+)/); if (mql) curLeft = parseInt(mql[1], 10);
+                            const moptl = r[1].t.match(/([a-d])/i); const vall = parseTfVal(r[2] ? r[2].t : r[1].t);
                             if (curLeft && moptl && vall !== null) {
                                 if (!tfDict[curLeft]) tfDict[curLeft] = {};
                                 tfDict[curLeft][moptl[1].toLowerCase()] = vall;
-                            }
-                            const moptr = r[2].t.match(/([a-d])/i); const valr = parseTfVal(r[3].t);
-                            if (curRight && moptr && valr !== null) {
-                                if (!tfDict[curRight]) tfDict[curRight] = {};
-                                tfDict[curRight][moptr[1].toLowerCase()] = valr;
-                            }
-                        } else if (r.length >= 2) {
-                            if (r.length >= 3) {
-                                const mq = r[0].t.match(/(\d+)/); if (mq) curLeft = parseInt(mq[1], 10);
-                                const mopt = r[1].t.match(/([a-d])/i); const val = parseTfVal(r[2].t);
-                                if (curLeft && mopt && val !== null) {
-                                    if (!tfDict[curLeft]) tfDict[curLeft] = {};
-                                    tfDict[curLeft][mopt[1].toLowerCase()] = val;
-                                }
-                            } else {
-                                const mopt = r[0].t.match(/([a-d])/i); const val = parseTfVal(r[1].t);
-                                if (curLeft && mopt && val !== null) {
-                                    if (!tfDict[curLeft]) tfDict[curLeft] = {};
-                                    tfDict[curLeft][mopt[1].toLowerCase()] = val;
-                                }
                             }
                         }
                     });
@@ -13970,7 +13970,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
                 }
             }
 
-            // 2. Phân tích từ chuỗi text thuần / bảng trải phẳng
+            // 2. Phân tích từ chuỗi text thuần / bảng markdown / dán text
             let rawText = '';
             if (Array.isArray(source)) {
                 rawText = source.map(l => {
@@ -13983,170 +13983,96 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
             }
 
             const rawLines = rawText.split('\n');
-            const secPartRe = /^(?:[\•\-\s]*)(?:phần|phan|part)\s*(i{1,3}|iv|v|1|2|3)\b/i;
-            const sections = [];
-            rawLines.forEach((line, i) => {
-                const m = line.trim().match(secPartRe);
-                if (m) {
-                    const v = m[1].toLowerCase();
-                    const stype = (v === 'i' || v === '1') ? 'mc' : ((v === 'ii' || v === '2') ? 'tf' : 'sa');
-                    sections.push({ type: stype, start: i });
+
+            // Xác định vùng BẢNG ĐÁP ÁN (ưu tiên quét từ điểm dừng HẾT / BẢNG ĐÁP ÁN để tránh nhận nhầm câu hỏi ở thân bài)
+            const stopRe = /^[\s\|\•\-\*]*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:bảng\s+)?đáp\s+án|hướng\s+dẫn\s+giải|hướng\s+dẫn\s+chấm)/i;
+            let stopIdx = rawLines.findIndex(l => stopRe.test(l.trim()));
+            const keyLines = (stopIdx >= 0) ? rawLines.slice(stopIdx) : rawLines;
+
+            // [BẢNG NGANG TEXT/MARKDOWN] (Row 1: Câu 1, 2... | Row 2: ĐA B, B...)
+            for (let i = 0; i < keyLines.length - 1; i++) {
+                let r1 = keyLines[i].split('\t').map(c => c.trim());
+                if (r1.length < 3) r1 = keyLines[i].split('|').map(c => c.trim());
+                if (r1.length > 0 && r1[0] === '') r1.shift();
+                if (r1.length > 0 && r1[r1.length - 1] === '') r1.pop();
+
+                let r2 = keyLines[i + 1].split('\t').map(c => c.trim());
+                if (r2.length < 3) r2 = keyLines[i + 1].split('|').map(c => c.trim());
+                if (r2.length > 0 && r2[0] === '') r2.shift();
+                if (r2.length > 0 && r2[r2.length - 1] === '') r2.pop();
+
+                if (r1.length >= 3 && r2.length >= 3) {
+                    let colStart = 0;
+                    if (isNaN(parseInt(r1[0], 10))) colStart = 1;
+                    let numCount = 0, letterCount = 0;
+                    for (let j = colStart; j < Math.min(r1.length, r2.length); j++) {
+                        if (/^\d+$/.test(r1[j])) numCount++;
+                        if (/^[A-D]$/i.test(r2[j])) letterCount++;
+                    }
+                    if (numCount >= 3 && letterCount >= 3) {
+                        for (let j = colStart; j < Math.min(r1.length, r2.length); j++) {
+                            const qn = parseInt(r1[j], 10);
+                            const letter = r2[j].toUpperCase();
+                            const aIdx = ['A', 'B', 'C', 'D'].indexOf(letter);
+                            if (!isNaN(qn) && aIdx !== -1) res.mc[qn] = aIdx;
+                        }
+                    }
+                }
+            }
+
+            // Quét dọc bảng TF, SA, MC trong keyLines
+            let curLeft = null, curRight = null;
+            const tfDict = {};
+
+            keyLines.forEach(line => {
+                let cells = line.split('\t').map(c => c.trim());
+                if (cells.length < 3) {
+                    cells = line.split(/\|/).map(c => c.trim());
+                    if (cells.length > 0 && cells[0] === '') cells.shift();
+                    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+                }
+                if (cells.some(c => /^(?:câu|lệnh\s*hỏi|đáp\s*án.*)$/i.test(c))) return;
+
+                if (cells.length >= 6) {
+                    const mql = cells[0].match(/(\d+)/); if (mql) curLeft = parseInt(mql[1], 10);
+                    const moptl = cells[1].match(/([a-d])/i); const vall = parseTfVal(cells[2]);
+                    if (curLeft && moptl && vall !== null) {
+                        if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                        tfDict[curLeft][moptl[1].toLowerCase()] = vall;
+                    }
+                    const mqr = cells[3].match(/(\d+)/); if (mqr) curRight = parseInt(mqr[1], 10);
+                    const moptr = cells[4].match(/([a-d])/i); const valr = parseTfVal(cells[5]);
+                    if (curRight && moptr && valr !== null) {
+                        if (!tfDict[curRight]) tfDict[curRight] = {};
+                        tfDict[curRight][moptr[1].toLowerCase()] = valr;
+                    }
+                } else if (cells.length >= 4) {
+                    const m1q = cells[0].match(/^(\d+)$/);
+                    const m2q = cells[2].match(/^(\d+)$/);
+                    if (m1q && cells[1] && m2q && cells[3]) {
+                        res.sa[parseInt(m1q[1], 10)] = cleanCell(cells[1]);
+                        res.sa[parseInt(m2q[1], 10)] = cleanCell(cells[3]);
+                    }
+                } else if (cells.length >= 2) {
+                    const mq = cells[0].match(/^(\d+)$/);
+                    if (mq && cells[1]) {
+                        const optLetter = cells[1].toUpperCase();
+                        if (/^[A-D]$/.test(optLetter) && res.mc[parseInt(mq[1], 10)] === undefined) {
+                            res.mc[parseInt(mq[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(optLetter);
+                        } else if (!res.sa[parseInt(mq[1], 10)]) {
+                            res.sa[parseInt(mq[1], 10)] = cleanCell(cells[1]);
+                        }
+                    }
                 }
             });
 
-            const chunks = {};
-            if (sections.length > 0) {
-                sections.forEach((sec, idx) => {
-                    const nextStart = idx + 1 < sections.length ? sections[idx + 1].start : rawLines.length;
-                    chunks[sec.type] = rawLines.slice(sec.start, nextStart);
-                });
-            } else {
-                chunks.all = rawLines;
-            }
-
-            function parseMcLines(lines) {
-                lines.forEach(line => {
-                    if (/^\s*phần\s*(?:i|1)\s*[:\.]?\s*(?:mỗi\s*câu|trắc\s*nghiệm)?.*$/i.test(line) && !/\b\d+\s*[\.\:\-\)]?\s*[A-D]\b/i.test(line)) return;
-                    let cells = line.split('\t').map(c => c.trim());
-                    if (cells.length < 2) cells = line.split(/\s{2,}|\|/).map(c => c.trim()).filter(Boolean);
-                    if (cells.some(c => /^(?:câu|đáp\s*án|dap\s*an)$/i.test(c))) return;
-
-                    if (cells.length >= 4) {
-                        const m1q = cells[0].match(/(\d+)/), m1a = cells[1].match(/([A-D])/i);
-                        if (m1q && m1a) res.mc[parseInt(m1q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m1a[1].toUpperCase());
-                        const m2q = cells[2].match(/(\d+)/), m2a = cells[3].match(/([A-D])/i);
-                        if (m2q && m2a) res.mc[parseInt(m2q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m2a[1].toUpperCase());
-                    } else if (cells.length >= 2) {
-                        const mq = cells[0].match(/(\d+)/), ma = cells[1].match(/([A-D])/i);
-                        if (mq && ma) res.mc[parseInt(mq[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(ma[1].toUpperCase());
-                    }
-                });
-
-                const combined = lines.join('\n');
-                const inlineMatches = [...combined.matchAll(/(?:câu\s*)?(\d{1,3})\s*[\.\:\-\)\/]?\s*([A-D])\b/gi)];
-                inlineMatches.forEach(m => {
-                    const qNum = parseInt(m[1], 10);
-                    const aIdx = ['A', 'B', 'C', 'D'].indexOf(m[2].toUpperCase());
-                    if (!isNaN(qNum) && aIdx !== -1 && res.mc[qNum] === undefined) {
-                        res.mc[qNum] = aIdx;
-                    }
-                });
-            }
-
-            function parseTfLines(lines) {
-                let curLeft = null, curRight = null;
-                const tfDict = {};
-
-                lines.forEach(line => {
-                    if (/phần\s*(?:ii|2)|điểm\s*tối\s*đa|thí\s*sinh/i.test(line)) return;
-                    let cells = line.split('\t').map(c => c.trim());
-                    if (cells.length < 3) {
-                        cells = line.split(/\|/).map(c => c.trim());
-                        if (cells.length >= 2 && cells[0] === '') cells.pop(0);
-                        if (cells.length >= 1 && cells[cells.length - 1] === '') cells.pop();
-                    }
-                    if (cells.some(c => /^(?:câu|lệnh\s*hỏi|đáp\s*án.*)$/i.test(c))) return;
-
-                    if (cells.length >= 6) {
-                        const mql = cells[0].match(/(\d+)/); if (mql) curLeft = parseInt(mql[1], 10);
-                        const moptl = cells[1].match(/([a-d])/i); const vall = parseTfVal(cells[2]);
-                        if (curLeft && moptl && vall !== null) {
-                            if (!tfDict[curLeft]) tfDict[curLeft] = {};
-                            tfDict[curLeft][moptl[1].toLowerCase()] = vall;
-                        }
-                        const mqr = cells[3].match(/(\d+)/); if (mqr) curRight = parseInt(mqr[1], 10);
-                        const moptr = cells[4].match(/([a-d])/i); const valr = parseTfVal(cells[5]);
-                        if (curRight && moptr && valr !== null) {
-                            if (!tfDict[curRight]) tfDict[curRight] = {};
-                            tfDict[curRight][moptr[1].toLowerCase()] = valr;
-                        }
-                    } else if (cells.length >= 2) {
-                        if (cells.length >= 3) {
-                            const mq = cells[0].match(/(\d+)/); if (mq) curLeft = parseInt(mq[1], 10);
-                            const mopt = cells[1].match(/([a-d])/i); const val = parseTfVal(cells[2]);
-                            if (curLeft && mopt && val !== null) {
-                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
-                                tfDict[curLeft][mopt[1].toLowerCase()] = val;
-                            }
-                        } else {
-                            const mopt = cells[0].match(/([a-d])/i); const val = parseTfVal(cells[1]);
-                            if (curLeft && mopt && val !== null) {
-                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
-                                tfDict[curLeft][mopt[1].toLowerCase()] = val;
-                            }
-                        }
-                    }
-                });
-
-                lines.forEach(line => {
-                    const mq = line.match(/(?:câu\s*)?(\d+)[\s\.\:\-]/i);
-                    if (mq) {
-                        const qNum = parseInt(mq[1], 10);
-                        const subOpts = [...line.matchAll(/([a-d])\s*[\-\:\)\.]\s*([ĐDSFT]|đúng|sai|true|false)\b/gi)];
-                        if (subOpts.length >= 2) {
-                            if (!tfDict[qNum]) tfDict[qNum] = {};
-                            subOpts.forEach(so => {
-                                const v = parseTfVal(so[2]);
-                                if (v !== null) tfDict[qNum][so[1].toLowerCase()] = v;
-                            });
-                        } else {
-                            const tailSlice = line.slice(mq.index + mq[0].length);
-                            const rawTfs = [...tailSlice.matchAll(/\b([ĐDSFT])\b/gi)];
-                            if (rawTfs.length === 4) {
-                                if (!tfDict[qNum]) tfDict[qNum] = {};
-                                ['a', 'b', 'c', 'd'].forEach((letter, idx) => {
-                                    tfDict[qNum][letter] = parseTfVal(rawTfs[idx][1]);
-                                });
-                            }
-                        }
-                    }
-                });
-
-                for (const qNum in tfDict) {
-                    res.tf[parseInt(qNum, 10)] = [
-                        Boolean(tfDict[qNum].a),
-                        Boolean(tfDict[qNum].b),
-                        Boolean(tfDict[qNum].c),
-                        Boolean(tfDict[qNum].d)
-                    ];
-                }
-            }
-
-            function parseSaLines(lines) {
-                lines.forEach(line => {
-                    if (/phần\s*(?:iii|3)|mỗi\s*câu|điểm\b/i.test(line)) return;
-                    let cells = line.split('\t').map(c => c.trim());
-                    if (cells.length < 2) cells = line.split(/\s{2,}|\|/).map(c => c.trim()).filter(Boolean);
-                    if (cells.some(c => /^(?:câu|đáp\s*án|dap\s*an)$/i.test(c))) return;
-
-                    if (cells.length >= 4) {
-                        const m1q = cells[0].match(/(\d+)/);
-                        if (m1q && cells[1]) res.sa[parseInt(m1q[1], 10)] = cleanCell(cells[1]);
-                        const m2q = cells[2].match(/(\d+)/);
-                        if (m2q && cells[3]) res.sa[parseInt(m2q[1], 10)] = cleanCell(cells[3]);
-                    } else if (cells.length >= 2) {
-                        const mq = cells[0].match(/(\d+)/);
-                        if (mq && cells[1]) res.sa[parseInt(mq[1], 10)] = cleanCell(cells[1]);
-                    }
-                });
-
-                lines.forEach(line => {
-                    const m = line.match(/^\s*(?:câu\s*)?(\d+)\s*(?:[\.\:\=]|\s*[\-]\s+|\t)\s*(-?[\d\.,/]+)/i);
-                    if (m) {
-                        const qNum = parseInt(m[1], 10);
-                        const val = m[2].trim();
-                        if (val && res.sa[qNum] === undefined) res.sa[qNum] = val;
-                    }
-                });
-            }
-
-            if (chunks.mc) parseMcLines(chunks.mc);
-            if (chunks.tf) parseTfLines(chunks.tf);
-            if (chunks.sa) parseSaLines(chunks.sa);
-            if (chunks.all) {
-                parseMcLines(chunks.all);
-                parseTfLines(chunks.all);
-                parseSaLines(chunks.all);
+            for (const qNum in tfDict) {
+                res.tf[parseInt(qNum, 10)] = [
+                    Boolean(tfDict[qNum].a),
+                    Boolean(tfDict[qNum].b),
+                    Boolean(tfDict[qNum].c),
+                    Boolean(tfDict[qNum].d)
+                ];
             }
 
             res.totalFound = Object.keys(res.mc).length + Object.keys(res.tf).length + Object.keys(res.sa).length;
@@ -17417,7 +17343,7 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
         // ============================================================
         const EXAM_Q_START_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?\d+\s*(?:[\.\:\-\)\/]\s*|\s+|$)|\d+\s*[\.\)\:]\s*(?=[A-ZÀ-Ỹa-zà-ỹ\"\'\(\[]))/i;
         const EXAM_Q_NUM_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?)?(\d+)/i;
-        const EXAM_STEM_CLEAN_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question|bài|bai)\s*(?:số\s*)?\d+\s*[\.\:\-\)\/]?|\d+\s*[\.\)\:])\s*/i;
+        const EXAM_STEM_CLEAN_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question|bài|bai)\s*(?:số\s*)?\d+\s*(?:\([^\)]*(?:đ|điểm|pts?)[^\)]*\))?\s*[\.\:\-\)\/]?|\d+\s*[\.\)\:])\s*/i;
         const EXAM_SOLUTION_RE = /^\s*(?:lời\s+giải|hướng\s+dẫn(?:\s+giải)?|giải\s+thích|giải\s*[:\.]|bài\s+giải|gợi\s+ý)/i;
         const EXAM_STOP_RE = /^[\s\|\•\-\*]*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:(?:đề\s+kiểm\s+tra\s*\d*.*?)?[\s\|]+)?(?:bảng\s+)?đáp\s+án\b.*$|bảng\s+đáp\s+án.*$|hướng\s+dẫn\s+(?:giải|chấm).*$|lời\s+giải\s+chi\s+tiết.*$|thang\s+điểm.*$)/i;
         const EXAM_INSTRUCTION_RE = /^\s*(?:thí\s*sinh|mỗi\s*câu|trong\s*mỗi|câu\s+trắc\s+nghiệm|chỉ\s*chọn|lưu\s*ý|hướng\s*dẫn\s*làm)/i;
