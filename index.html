@@ -23141,15 +23141,20 @@ function enHeader(doc, cfg, ver, withAns, total) {
         ['Toán','🧮',[1,2,3,4,5,6,7,8,9,10,11,12]], ['Tiếng Việt','📖',[1,2,3,4,5]], 
         ['Tiếng Anh','🔤',[3,4,5,6,7,8,9,10,11,12]], ['Đạo đức','🌱',[1,2,3,4,5]], ['Giáo dục công dân','⚖️',[6,7,8,9]],
         ['Tự nhiên và Xã hội','🌿',[1,2,3]], ['Khoa học','🔬',[4,5]], ['Khoa học tự nhiên','🧪',[6,7,8,9]],
-        ['Lịch sử và Địa lí','🗺️',[4,5,6,7,8,9]], ['Vật lí','⚛️',[10,11,12]], ['Hóa học','⚗️',[10,11,12]], ['Sinh học','🧬',[10,11,12]],
-        ['Lịch sử','🏛️',[10,11,12]], ['Địa lí','🌏',[10,11,12]], ['Giáo dục kinh tế và pháp luật','⚖️',[10,11,12]],
+        ['Lịch sử và Địa lí','🗺️',[4,5,6,7,8,9]], ['Vật lí','⚛️',[6,7,8,9,10,11,12]], ['Hóa học','⚗️',[6,7,8,9,10,11,12]], ['Sinh học','🧬',[6,7,8,9,10,11,12]],
+        ['Lịch sử','🏛️',[6,7,8,9,10,11,12]], ['Địa lí','🌏',[6,7,8,9,10,11,12]], ['Giáo dục kinh tế và pháp luật','⚖️',[10,11,12]],
         ['Tin học','💻',[3,4,5,6,7,8,9,10,11,12]], ['Công nghệ','🔧',[3,4,5,6,7,8,9,10,11,12]],
          ['Giáo dục quốc phòng và an ninh','🛡️',[10,11,12]],
          
         
     ];
     /* Danh sách bài mẫu (# = tên chương). Các môn/lớp chưa có sẵn: giáo viên bấm "Thêm bài". Có thể sửa/xóa từng bài. */
-    var CUR = {};   /* [CODE137] đã xóa toàn bộ danh sách bài mẫu - giáo viên tự nhập / tải từ file */
+    var CUR = {
+        'Hóa học|6': '#Chương 1: Mở đầu|Bài 1: Giới thiệu về Khoa học tự nhiên|Bài 2: Các lĩnh vực chủ yếu của Khoa học tự nhiên|Bài 3: Quy định an toàn trong phòng thực hành|#Chương 2: Chất quanh ta|Bài 4: Các thể của chất và sự chuyển thể|Bài 5: Tính chất của chất|#Chương 3: Một số vật liệu, nhiên liệu, nguyên liệu thông dụng|Bài 6: Một số vật liệu thông dụng|Bài 7: Một số nhiên liệu thông dụng|Bài 8: Một số nguyên liệu thông dụng|Bài 9: Một số lương thực - thực phẩm thông dụng|#Chương 4: Hỗn hợp và tách chất|Bài 10: Hỗn hợp, chất tinh khiết - Dung dịch|Bài 11: Tách chất ra khỏi hỗn hợp',
+        'Hóa học|7': '#Chương 1: Nguyên tử - Nguyên tố hóa học|Bài 1: Phương pháp và kĩ năng học tập môn KHTN|Bài 2: Nguyên tử|Bài 3: Nguyên tố hóa học|Bài 4: Sơ lược về bảng tuần hoàn các nguyên tố hóa học|#Chương 2: Phân tử - Liên kết hóa học|Bài 5: Phân tử - Đơn chất - Hợp chất|Bài 6: Giới thiệu về liên kết hóa học|Bài 7: Hóa trị và công thức hóa học',
+        'Hóa học|8': '#Chương 1: Phản ứng hóa học|Bài 1: Sử dụng hóa chất, thiết bị cơ bản trong phòng thí nghiệm|Bài 2: Phản ứng hóa học|Bài 3: Định luật bảo toàn khối lượng và phương trình hóa học|Bài 4: Mol và tỉ khối của chất khí|Bài 5: Dung dịch và nồng độ dung dịch|Bài 6: Tính theo phương trình hóa học|Bài 7: Tốc độ phản ứng và chất xúc tác|#Chương 2: Một số hợp chất thông dụng|Bài 8: Acid|Bài 9: Base - Thang pH|Bài 10: Oxide|Bài 11: Muối|Bài 12: Phân bón hóa học',
+        'Hóa học|9': '#Chương 1: Kim loại|Bài 1: Tính chất của kim loại - Dãy hoạt động hóa học|Bài 2: Tách kim loại và việc sử dụng hợp kim|Bài 3: Sự ăn mòn kim loại và bảo vệ kim loại|#Chương 2: Hợp chất hữu cơ - Hydrocarbon|Bài 4: Giới thiệu về hợp chất hữu cơ|Bài 5: Alkane|Bài 6: Alkene|Bài 7: Nguồn nhiên liệu (Dầu mỏ, khí thiên nhiên)|#Chương 3: Dẫn xuất hydrocarbon - Polymer|Bài 8: Ethylic alcohol|Bài 9: Acetic acid|Bài 10: Lipid - Chất béo|Bài 11: Carbohydrate - Glucose và Saccharose|Bài 12: Tinh bột và Cellulose|Bài 13: Protein|Bài 14: Polymer'
+    };
     var st = { order: [], lessons: {}, q: {}, m: {} }, path = [], modal, body, keepPath = false;
     function loadSt() { st = { order: [], lessons: {}, q: {}, m: {} }; try { var s = JSON.parse(localStorage.getItem(lsk()) || '{}'); st.order = s.order || []; st.lessons = s.lessons || {}; st.q = s.q || {}; st.m = s.m || {}; } catch (e) {} }
     loadSt();
