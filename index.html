@@ -16292,7 +16292,8 @@ function findVercelStudent(query) {
         // Tìm vị trí 4 ý a) b) c) d) (chữ thường hoặc hoa) trong khối câu hỏi
         function findTFPositions(plain, richArr) {
             const cand = { a: [], b: [], c: [], d: [] };
-            const re = /(^|[\n\s])([a-dA-D])\s*([\)\.])\s*/g;
+            // Bắt "a. ", "a) ", "a: ", "a- ", "a/ " HOẶC ở đầu dòng "b " (khi tác giả quên gõ dấu chấm/ngoặc)
+            const re = /(^|[\n\s])([a-dA-D])(?:\s*([\)\.\:\-\/])\s*|\s+(?=[A-ZÀ-Ỹa-zà-ỹ0-9\$\+\-\(]))/g;
             let m;
             while ((m = re.exec(plain)) !== null) {
                 const letter = m[2].toLowerCase();
@@ -16302,7 +16303,8 @@ function findVercelStudent(query) {
                 if (richArr && richArr[start] && richArr[start].inMath) continue;
                 if (((plain.slice(0, start).match(/\$/g) || []).length) % 2 === 1) continue;
                 const lineStart = start === 0 || plain[start - 1] === '\n';
-                if (m[3] === '.' && !lineStart) continue;
+                const sep = m[3] || '';
+                if ((sep === '.' || !sep) && !lineStart) continue;
                 if (m[2] !== letter && !lineStart) continue;
                 cand[letter].push({ start, bodyStart, lineStart });
             }
