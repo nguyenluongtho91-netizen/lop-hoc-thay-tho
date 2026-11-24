@@ -7665,7 +7665,7 @@ function findVercelStudent(query) {
                 });
 
                 // Tách câu hỏi chốt ở cuối nếu dính liền với ý cuối cùng
-                const trailingQRe = /([\.?!;]?)\s+((?:có\s+bao\s+nhiêu|số\s+(?:lượng|phản\s*ứng|yếu\s*tố|phát\s*biểu|thí\s*nghiệm|ứng\s*dụng|chất|đồng\s*phân|chất\s*khí|kết\s*tủa|dung\s*dịch|nhận\s*định|mệnh\s*đề)|hãy\s*cho\s*biết|dãy\s*gồm|trong\s*các\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|thí\s*nghiệm|chất)\s*trên|những\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố)\s*nào|yếu\s*tố\s*nào|phát\s*biểu\s*nào)\b[^\n]+)$/i;
+                const trailingQRe = /([\.?!;]?)\s+((?:có\s+bao\s+nhiêu|số\s+(?:lượng|phản\s*ứng|yếu\s*tố|phát\s*biểu|thí\s*nghiệm|ứng\s*dụng|chất|đồng\s*phân|chất\s*khí|kết\s*tủa|dung\s*dịch|nhận\s*định|nhận\s*xét|khẳng\s*định|mệnh\s*đề|hàm\s*số|giá\s*trị|nghiệm|phương\s*trình|đặc\s*điểm|câu|ý)|hãy\s*cho\s*biết|dãy\s*gồm|trong\s*các\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|thí\s*nghiệm|chất|mệnh\s*đề|khẳng\s*định|đặc\s*điểm)\s*trên|những\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|khẳng\s*định|mệnh\s*đề|đặc\s*điểm)\s*nào|yếu\s*tố\s*nào|phát\s*biểu\s*nào|mệnh\s*đề\s*nào|khẳng\s*định\s*nào|chất\s*nào)(?![A-Za-zÀ-ỹ0-9])[^\n]+)$/i;
                 s = s.replace(trailingQRe, (m, p, q) => '\n' + q);
             }
 
