@@ -8618,7 +8618,7 @@ function findVercelStudent(query) {
         //   tf : { type:'tf', text, options:[{letter:'a'..'d',text}], tfAnswers:[true,false,true,true] }
         //   sa : { type:'sa', text, options:[], shortAnswer:'12,5' }
         // ============================================================
-        const PART_ORDER = { mc: 0, tf: 1, sa: 2 };
+        const PART_ORDER = { mc: 0, tf: 1, sa: 2, tl: 3 };
         const PART_META = {
             mc: {
                 roman: 'I',
@@ -8637,6 +8637,12 @@ function findVercelStudent(query) {
                 title: 'Câu trắc nghiệm trả lời ngắn.',
                 desc: () => `Mỗi đáp án gồm tối đa 4 ký tự (số, dấu âm, dấu phẩy).`,
                 badge: 'bg-orange-600', soft: 'from-orange-50 to-amber-50 border-orange-300 text-orange-900'
+            },
+            tl: {
+                roman: 'IV',
+                title: 'Câu hỏi tự luận.',
+                desc: () => `Thí sinh trình bày bài giải hoặc chụp ảnh bài viết tay tải lên.`,
+                badge: 'bg-purple-600', soft: 'from-purple-50 to-violet-50 border-purple-300 text-purple-900'
             }
         };
         // [CODE18] Điểm: tổng điểm mỗi phần chia đều cho số câu của phần đó.
@@ -8742,12 +8748,18 @@ function findVercelStudent(query) {
         }
 
         function qType(q) {
-            return (q && (q.type === 'tf' || q.type === 'sa')) ? q.type : 'mc';
+            if (!q) return 'mc';
+            if (q.type === 'tf' || q.type === 'sa' || q.type === 'tl' || q.type === 'essay') return (q.type === 'essay' ? 'tl' : q.type);
+            return 'mc';
         }
 
         function countByType(list) {
-            const c = { mc: 0, tf: 0, sa: 0 };
-            (list || []).forEach(q => { c[qType(q)]++; });
+            const c = { mc: 0, tf: 0, sa: 0, tl: 0 };
+            (list || []).forEach(q => {
+                const t = qType(q);
+                if (c[t] !== undefined) c[t]++;
+                else c[t] = 1;
+            });
             return c;
         }
 
@@ -8769,10 +8781,11 @@ function findVercelStudent(query) {
         }
 
         function getNumbering() {
-            const c = { mc: 0, tf: 0, sa: 0 };
+            const c = { mc: 0, tf: 0, sa: 0, tl: 0 };
             const map = {};
             questionsData.forEach(q => {
                 const t = qType(q);
+                if (c[t] === undefined) c[t] = 0;
                 c[t]++;
                 map[q.id] = { t, num: c[t] };
             });
@@ -8807,6 +8820,7 @@ function findVercelStudent(query) {
             const t = qType(q);
             if (t === 'tf') return Array.isArray(ua.values) && ua.values.length >= 4 && ua.values.slice(0, 4).every(v => v === true || v === false);
             if (t === 'sa') return String(ua.value || '').trim() !== '';
+            if (t === 'tl') return Boolean((ua.text && ua.text.trim()) || (Array.isArray(ua.images) && ua.images.length > 0));
             return !!ua.selectedLetter;
         }
 
@@ -8852,6 +8866,7 @@ function findVercelStudent(query) {
             if (!ua) return 0;
             if (t === 'tf') return tfEarnedFor(q, ua);
             if (t === 'sa') return shortAnswerMatches(ua.value, q.shortAnswer) ? questionMaxPoints(q) : 0;
+            if (t === 'tl') return typeof ua.score === 'number' ? ua.score : 0;
             return ua.selectedLetter && ua.selectedLetter === q.correct ? questionMaxPoints(q) : 0;
         }
 
@@ -8873,21 +8888,22 @@ function findVercelStudent(query) {
             const parts = {
                 mc: { n: 0, full: 0, earned: 0, max: 0 },
                 tf: { n: 0, full: 0, earned: 0, max: 0 },
-                sa: { n: 0, full: 0, earned: 0, max: 0 }
+                sa: { n: 0, full: 0, earned: 0, max: 0 },
+                tl: { n: 0, full: 0, earned: 0, max: 0 }
             };
             const perQ = getPerQuestionPoints();
             questionsData.forEach(q => {
                 const t = qType(q);
                 const ua = userAnswers[q.id];
-                const p = parts[t];
+                const p = parts[t] || parts.mc;
                 p.n++;
                 p.max += maxPointsFor(q, perQ, currentScoring);
                 p.earned += questionEarnedPoints(q, ua);
                 if (questionFullyCorrect(q, ua)) p.full++;
             });
-            const earned = parts.mc.earned + parts.tf.earned + parts.sa.earned;
-            const max = parts.mc.max + parts.tf.max + parts.sa.max;
-            const full = parts.mc.full + parts.tf.full + parts.sa.full;
+            const earned = parts.mc.earned + parts.tf.earned + parts.sa.earned + (parts.tl ? parts.tl.earned : 0);
+            const max = parts.mc.max + parts.tf.max + parts.sa.max + (parts.tl ? parts.tl.max : 0);
+            const full = parts.mc.full + parts.tf.full + parts.sa.full + (parts.tl ? parts.tl.full : 0);
             const score10 = max > 0 ? Math.round(earned / max * 10 * 100) / 100 : 0;
             const percent = max > 0 ? Math.round(earned / max * 100) : 0;
             return { parts, earned, max, full, score10, percent };
@@ -8933,6 +8949,29 @@ function findVercelStudent(query) {
             const value = String(raw == null ? '' : raw);
             if (value.trim() === '') delete userAnswers[qId];
             else userAnswers[qId] = { type: 'sa', value, isCorrect: shortAnswerMatches(value, q.shortAnswer) };
+            updateAnsweredProgressUI();
+            checkAllCompleted();
+        }
+
+        function setEssayAnswer(qId, data) {
+            if (isTimeOut || isQuizSubmitted) return;
+            if (isStudentMode && !hasStartedQuiz) return;
+            const q = questionsData.find(item => item.id === qId);
+            if (!q) return;
+            const text = String((data && data.text) || '').trim();
+            const images = Array.isArray(data && data.images) ? data.images : [];
+            if (!text && !images.length) {
+                delete userAnswers[qId];
+            } else {
+                userAnswers[qId] = {
+                    type: 'tl',
+                    text,
+                    images,
+                    score: (userAnswers[qId] && userAnswers[qId].score) || 0,
+                    graded: (userAnswers[qId] && userAnswers[qId].graded) || false,
+                    comment: (userAnswers[qId] && userAnswers[qId].comment) || ''
+                };
+            }
             updateAnsweredProgressUI();
             checkAllCompleted();
         }
@@ -9030,6 +9069,615 @@ function findVercelStudent(query) {
         }
 
         // [CODE17] Dựng 1 thẻ câu hỏi theo dạng (nhiều lựa chọn / đúng-sai / trả lời ngắn)
+
+        // ============================================================
+        // [CODE-TL] HỖ TRỢ PHẦN IV: CÂU HỎI TỰ LUẬN, CHỤP ẢNH & TÍCH ĐÚNG/SAI (AZOTA STYLE)
+        // ============================================================
+        function compressImageFile(file, maxWidth = 1000, quality = 0.72) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        let w = img.width, h = img.height;
+                        if (w > maxWidth || h > maxWidth) {
+                            if (w > h) {
+                                h = Math.round((h * maxWidth) / w);
+                                w = maxWidth;
+                            } else {
+                                w = Math.round((w * maxWidth) / h);
+                                h = maxWidth;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        }
+
+        function openImageZoomModal(imgSrc) {
+            let modal = document.getElementById('image-zoom-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'image-zoom-modal';
+                modal.className = 'fixed inset-0 z-[999999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 animate-in fade-in duration-200';
+                modal.onclick = (e) => { if (e.target === modal || e.target.tagName === 'BUTTON') modal.classList.add('hidden'); };
+                modal.innerHTML = `
+                    <div class="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden p-2 flex flex-col items-center">
+                        <button type="button" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white font-bold flex items-center justify-center transition z-10">✕</button>
+                        <img id="image-zoom-img" src="" class="max-h-[82vh] max-w-full rounded-xl object-contain">
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            document.getElementById('image-zoom-img').src = imgSrc;
+            modal.classList.remove('hidden');
+        }
+
+        function buildEssayQuestionCard(q, idx, num, reviewing, userAns, isLocked, qCard, qTitle) {
+            const wrap = document.createElement('div');
+            wrap.className = 'q-tl-wrap mt-2 space-y-3';
+
+            const maxPts = questionMaxPoints(q) || (q.pts || 1.0);
+            
+            // Header điểm tối đa
+            const ptsBadge = document.createElement('div');
+            ptsBadge.className = 'flex items-center justify-between text-xs font-bold text-purple-700 bg-purple-50/80 px-3 py-1.5 rounded-xl border border-purple-200';
+            ptsBadge.innerHTML = `<span>📝 Câu hỏi tự luận</span><span class="bg-purple-200/60 px-2 py-0.5 rounded-lg text-purple-900 font-black">${fmtPoints(maxPts)} điểm</span>`;
+            wrap.appendChild(ptsBadge);
+
+            // Textarea cho bài làm
+            const textSection = document.createElement('div');
+            textSection.className = 'space-y-2';
+            const curText = (userAns && userAns.text) || '';
+            const curImages = (userAns && Array.isArray(userAns.images)) ? userAns.images.slice() : [];
+
+            if (!reviewing && !isLocked && !isPrintingMode) {
+                const txtArea = document.createElement('textarea');
+                txtArea.className = 'w-full p-3 rounded-xl border border-slate-300 text-sm font-sans focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition custom-scrollbar leading-relaxed';
+                txtArea.rows = 3;
+                txtArea.placeholder = 'Gõ bài làm hoặc ghi chú các bước giải của em vào đây...';
+                txtArea.value = curText;
+                txtArea.oninput = () => {
+                    const ans = userAnswers[q.id] || { type: 'tl', images: curImages };
+                    ans.text = txtArea.value;
+                    setEssayAnswer(q.id, ans);
+                };
+                textSection.appendChild(txtArea);
+
+                // Khu vực tải ảnh / chụp ảnh bài làm
+                const uploadBar = document.createElement('div');
+                uploadBar.className = 'flex items-center gap-2 flex-wrap';
+                uploadBar.innerHTML = `
+                    <label class="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs shadow-sm transition active:scale-95">
+                        <span>📷 Chụp ảnh / Tải ảnh bài làm</span>
+                        <input type="file" accept="image/*" multiple class="hidden q-essay-file-input">
+                    </label>
+                    <span class="text-[11px] text-slate-500 font-medium">Hỗ trợ chụp nhiều trang bài làm từ điện thoại hoặc máy tính</span>
+                `;
+                const fileInput = uploadBar.querySelector('.q-essay-file-input');
+                const galleryEl = document.createElement('div');
+                galleryEl.className = 'flex items-center gap-2 flex-wrap mt-2';
+
+                const renderThumbnails = () => {
+                    galleryEl.innerHTML = '';
+                    const imgs = (userAnswers[q.id] && userAnswers[q.id].images) || curImages;
+                    imgs.forEach((imgData, i) => {
+                        const thumb = document.createElement('div');
+                        thumb.className = 'relative w-20 h-20 rounded-xl border border-slate-300 overflow-hidden bg-slate-100 shadow-sm group';
+                        thumb.innerHTML = `
+                            <img src="${imgData}" class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition">
+                            <button type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white font-bold text-xs flex items-center justify-center opacity-80 hover:opacity-100 transition shadow">✕</button>
+                        `;
+                        thumb.querySelector('img').onclick = () => openImageZoomModal(imgData);
+                        thumb.querySelector('button').onclick = (e) => {
+                            e.stopPropagation();
+                            imgs.splice(i, 1);
+                            const ans = userAnswers[q.id] || { type: 'tl', text: txtArea.value };
+                            ans.images = imgs;
+                            setEssayAnswer(q.id, ans);
+                            renderThumbnails();
+                        };
+                        galleryEl.appendChild(thumb);
+                    });
+                };
+                renderThumbnails();
+
+                fileInput.onchange = async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (!files.length) return;
+                    for (const f of files) {
+                        try {
+                            const compressed = await compressImageFile(f);
+                            if (compressed) {
+                                const imgs = (userAnswers[q.id] && userAnswers[q.id].images) || curImages;
+                                imgs.push(compressed);
+                                const ans = userAnswers[q.id] || { type: 'tl', text: txtArea.value };
+                                ans.images = imgs;
+                                setEssayAnswer(q.id, ans);
+                            }
+                        } catch (err) {
+                            console.error('Lỗi nén ảnh:', err);
+                        }
+                    }
+                    renderThumbnails();
+                    fileInput.value = '';
+                };
+
+                textSection.appendChild(uploadBar);
+                textSection.appendChild(galleryEl);
+            } else {
+                // Chế độ xem lại bài (Reviewing hoặc Locked)
+                const ansBox = document.createElement('div');
+                ansBox.className = 'p-3 bg-white rounded-xl border border-slate-200 space-y-2';
+                if (curText) {
+                    ansBox.innerHTML += `<div class="text-xs font-bold text-slate-700"><span class="text-slate-500">Bài làm văn bản:</span><p class="mt-1 whitespace-pre-wrap font-normal text-slate-800 leading-relaxed">${_escHtml(curText)}</p></div>`;
+                }
+                if (curImages.length > 0) {
+                    const imgGal = document.createElement('div');
+                    imgGal.className = 'space-y-1';
+                    imgGal.innerHTML = `<span class="text-xs font-bold text-slate-500">Ảnh bài làm (${curImages.length} ảnh):</span>`;
+                    const gal = document.createElement('div');
+                    gal.className = 'flex gap-2 flex-wrap mt-1';
+                    curImages.forEach((imgSrc) => {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = imgSrc;
+                        imgEl.className = 'h-24 max-w-[140px] rounded-lg border border-slate-200 object-cover cursor-pointer hover:shadow-md transition';
+                        imgEl.onclick = () => openImageZoomModal(imgSrc);
+                        gal.appendChild(imgEl);
+                    });
+                    imgGal.appendChild(gal);
+                    ansBox.appendChild(imgGal);
+                }
+                if (!curText && !curImages.length) {
+                    ansBox.innerHTML = `<p class="text-xs italic text-slate-400">Em chưa nộp câu trả lời cho phần tự luận này.</p>`;
+                }
+                textSection.appendChild(ansBox);
+            }
+            wrap.appendChild(textSection);
+
+            // Review mode: chấm điểm & lời phê
+            if (reviewing) {
+                const graded = userAns && userAns.graded;
+                const earnedPts = userAns && typeof userAns.score === 'number' ? userAns.score : 0;
+                const comment = (userAns && userAns.comment) || '';
+
+                const gradeCard = document.createElement('div');
+                gradeCard.className = 'p-3 rounded-xl border ' + (graded ? (earnedPts >= maxPts * 0.8 ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50 border-amber-300') : 'bg-slate-100 border-slate-300');
+                
+                const isTeacher = !isStudentMode;
+                let gradeHtml = `
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-black text-slate-800">Điểm tự luận:</span>
+                            <span class="text-base font-black ${graded ? (earnedPts >= maxPts * 0.8 ? 'text-emerald-700' : 'text-amber-700') : 'text-slate-500'}">
+                                ${graded ? fmtPoints(earnedPts) : '---'} / ${fmtPoints(maxPts)} điểm
+                            </span>
+                        </div>
+                        ${!graded ? '<span class="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">⏳ Chờ chấm điểm</span>' : '<span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">✓ Đã chấm</span>'}
+                    </div>
+                `;
+
+                if (comment) {
+                    gradeHtml += `<div class="mt-2 text-xs text-slate-700 leading-relaxed font-medium bg-white/80 p-2.5 rounded-lg border border-slate-200/60">💬 <b>Nhận xét:</b> ${_escHtml(comment)}</div>`;
+                }
+
+                // Nếu là Giáo viên đang xem bài làm của học sinh: hiện các nút chấm điểm!
+                if (isTeacher) {
+                    gradeHtml += `
+                        <div class="mt-3 pt-2.5 border-t border-slate-200/80 flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-600">Nhập điểm:</span>
+                                <input type="number" min="0" max="${maxPts}" step="0.25" value="${earnedPts}" class="w-16 px-2 py-1 rounded-lg border border-slate-300 text-center text-sm font-black text-purple-700 outline-none q-teacher-score-input">
+                                <span class="text-xs font-bold text-slate-500">/${fmtPoints(maxPts)}đ</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${curImages.length > 0 ? `<button type="button" class="q-teacher-annotate-btn px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-sm transition active:scale-95 flex items-center gap-1"><span>✍️</span><span>Tích Đúng/Sai (Azota)</span></button>` : ''}
+                                <button type="button" class="q-teacher-ai-grade-btn px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs shadow-sm transition active:scale-95 flex items-center gap-1"><span>🤖</span><span>AI Chấm tự động</span></button>
+                                <button type="button" class="q-teacher-save-score-btn px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-sm transition active:scale-95">💾 Lưu điểm</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                gradeCard.innerHTML = gradeHtml;
+
+                if (isTeacher) {
+                    const scoreInp = gradeCard.querySelector('.q-teacher-score-input');
+                    const annotateBtn = gradeCard.querySelector('.q-teacher-annotate-btn');
+                    const aiBtn = gradeCard.querySelector('.q-teacher-ai-grade-btn');
+                    const saveBtn = gradeCard.querySelector('.q-teacher-save-score-btn');
+
+                    if (saveBtn) {
+                        saveBtn.onclick = () => {
+                            const val = parseFloat(scoreInp.value) || 0;
+                            updateTeacherGradingForEssay(q.id, val, comment);
+                        };
+                    }
+                    if (annotateBtn && curImages.length > 0) {
+                        annotateBtn.onclick = () => {
+                            openEssayAnnotatorModal(q, curImages, (newScore, newComment, annotatedImg) => {
+                                scoreInp.value = newScore;
+                                updateTeacherGradingForEssay(q.id, newScore, newComment, annotatedImg);
+                            });
+                        };
+                    }
+                    if (aiBtn) {
+                        aiBtn.onclick = async () => {
+                            aiBtn.disabled = true;
+                            aiBtn.innerHTML = `<span>⏳</span><span>Đang chấm...</span>`;
+                            try {
+                                const aiRes = await gradeEssayQuestionWithAI(q, curText, curImages, maxPts);
+                                if (aiRes && typeof aiRes.score === 'number') {
+                                    scoreInp.value = aiRes.score;
+                                    updateTeacherGradingForEssay(q.id, aiRes.score, aiRes.feedback || '');
+                                    alert(`✓ AI đã chấm xong: ${aiRes.score}/${maxPts} điểm!\n\nNhận xét: ${aiRes.feedback || ''}`);
+                                }
+                            } catch (eAI) {
+                                alert(`Lỗi AI chấm: ${eAI.message}`);
+                            } finally {
+                                aiBtn.disabled = false;
+                                aiBtn.innerHTML = `<span>🤖</span><span>AI Chấm tự động</span>`;
+                            }
+                        };
+                    }
+                }
+
+                wrap.appendChild(gradeCard);
+                appendSolutionBlock(qCard, q);
+            }
+
+            qCard.appendChild(wrap);
+            return qCard;
+        }
+
+        async function gradeEssayQuestionWithAI(q, text, images, maxPts) {
+            const apiKey = getAIApiKey();
+            if (!apiKey) throw new Error('Chưa cấu hình Gemini API Key!');
+
+            const parts = [];
+            if (Array.isArray(images) && images.length > 0) {
+                images.slice(0, 3).forEach(imgData => {
+                    const base64 = String(imgData).replace(/^data:image\/\w+;base64,/, '');
+                    parts.push({
+                        inlineData: {
+                            data: base64,
+                            mimeType: 'image/jpeg'
+                        }
+                    });
+                });
+            }
+
+            const prompt = `Bạn là trợ lý chấm thi tự luận chuyên nghiệp của Thầy Nguyễn Lương Thọ.
+Nhiệm vụ: Chấm bài làm tự luận của học sinh dưới đây một cách công tâm, chính xác.
+
+CÂU HỎI:
+${q.text}
+
+${q.solution ? `LỜI GIẢI MẪU / TIÊU CHÍ CHẤM (RUBRIC):\n${q.solution}\n` : ''}
+ĐIỂM TỐI ĐA: ${maxPts} điểm.
+
+BÀI LÀM VĂN BẢN CỦA HỌC SINH:
+${text || '(Học sinh không gõ văn bản, nộp bằng ảnh chụp bài làm)'}
+
+${images && images.length ? `(Học sinh có đính kèm ${images.length} ảnh bài làm viết tay ở trên)` : ''}
+
+Hãy đọc bài làm, chấm điểm và nhận xét chi tiết.
+Yêu cầu trả về DUY NHẤT một chuỗi JSON chuẩn:
+{
+  "score": 1.5,
+  "feedback": "Nhận xét ưu điểm, lỗi sai và cách khắc phục ngắn gọn, sư phạm",
+  "steps": [
+    { "text": "Bước 1...", "ok": true },
+    { "text": "Bước 2...", "ok": false }
+  ]
+}`;
+
+            parts.push({ text: prompt });
+
+            let apiModel = getAIModel() || 'gemini-3.8-flash';
+            const callGemini = async (m) => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+                return await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            responseMimeType: 'application/json'
+                        }
+                    })
+                });
+            };
+
+            let res = await callGemini(apiModel);
+            if (!res.ok && apiModel !== 'gemini-flash-latest') {
+                apiModel = 'gemini-flash-latest';
+                res = await callGemini(apiModel);
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error?.message || `Lỗi HTTP ${res.status}`);
+            }
+
+            const data = await res.json();
+            const textResp = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            let json = null;
+            try {
+                json = JSON.parse(textResp);
+            } catch (e) {
+                const m = textResp.match(/\{[\s\S]*\}/);
+                if (m) json = JSON.parse(m[0]);
+            }
+            return json;
+        }
+
+        function updateTeacherGradingForEssay(qId, score, comment, annotatedImg) {
+            if (!_rdItem) return;
+            const res = _rdItem;
+            if (!res.detail || !res.detail.ans) return;
+            const ua = res.detail.ans[qId] || { type: 'tl' };
+            ua.score = score;
+            ua.comment = comment;
+            ua.graded = true;
+            if (annotatedImg) {
+                ua.annotatedImage = annotatedImg;
+                if (Array.isArray(ua.images)) ua.images[0] = annotatedImg;
+            }
+            res.detail.ans[qId] = ua;
+
+            // Tính lại điểm tổng kết cho học sinh
+            const perQ = computePartPer(res.detail.qs, currentScoring, currentSubject);
+            let earned = 0, max = 0;
+            res.detail.qs.forEach(q => {
+                const a = res.detail.ans[q.id];
+                const mx = maxPointsFor(q, perQ, currentScoring);
+                max += mx;
+                earned += questionEarnedPoints(q, a);
+            });
+            res.score10 = max > 0 ? fmtPoints(Math.round(earned / max * 10 * 100) / 100) : '0';
+            res.scorePercent = max > 0 ? Math.round(earned / max * 100) : 0;
+
+            saveStudentResultsToStorage();
+            try { window.CloudSync && CloudSync.syncNow(); } catch (e) {}
+            renderResultDetail();
+            renderResultsModalContent();
+            alert(`✓ Đã lưu điểm câu tự luận: ${score} điểm! Điểm tổng kết mới của học sinh: ${res.score10}/10.`);
+        }
+
+        // ============================================================
+        // [CODE-TL] CÔNG CỤ CHẤM BÀI 1 CHẠM TÍCH ĐÚNG / SAI (AZOTA STYLE)
+        // ============================================================
+        let _annotatorModal = null;
+        function openEssayAnnotatorModal(q, images, onSaveCallback) {
+            if (!images || !images.length) return;
+            let modal = document.getElementById('essay-annotator-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'essay-annotator-modal';
+                modal.className = 'fixed inset-0 z-[999999] bg-slate-950/85 backdrop-blur-md flex flex-col p-2 select-none animate-in fade-in duration-200';
+                modal.innerHTML = `
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-800 text-white rounded-t-2xl shrink-0 flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">✍️</span>
+                            <span class="font-black text-sm uppercase tracking-wide">Chấm Tự Luận 1 Chạm (Azota Style)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <button type="button" data-tool="correct" class="ea-tool-btn px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs shadow flex items-center gap-1 transition">
+                                <span>✓</span><span>Đúng (Xanh)</span>
+                            </button>
+                            <button type="button" data-tool="incorrect" class="ea-tool-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-700 text-white font-black text-xs shadow flex items-center gap-1 transition">
+                                <span>✗</span><span>Sai (Đỏ)</span>
+                            </button>
+                            <button type="button" data-tool="circle" class="ea-tool-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-amber-600 text-white font-black text-xs shadow flex items-center gap-1 transition">
+                                <span>⭕</span><span>Khoanh tròn</span>
+                            </button>
+                            <button type="button" data-tool="pen" class="ea-tool-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-purple-600 text-white font-black text-xs shadow flex items-center gap-1 transition">
+                                <span>🖊️</span><span>Bút đỏ</span>
+                            </button>
+                            <button type="button" id="ea-undo-btn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">↩ Hoàn tác</button>
+                            <button type="button" id="ea-clear-btn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">🗑️ Xóa hết</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="ea-close-btn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition">✕</button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-h-0 relative flex items-center justify-center p-2 bg-slate-950 overflow-hidden">
+                        <canvas id="ea-canvas" class="max-h-full max-w-full rounded-xl shadow-2xl cursor-crosshair bg-white"></canvas>
+                    </div>
+
+                    <div class="px-4 py-3 bg-slate-900 border-t border-slate-800 text-white rounded-b-2xl shrink-0 flex items-center justify-between gap-3 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-400">Điểm chấm:</span>
+                            <input type="number" id="ea-score-input" min="0" max="10" step="0.25" value="1.0" class="w-16 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-center text-sm font-black text-emerald-400 outline-none">
+                            <span class="text-xs font-bold text-slate-400">/ <span id="ea-max-pts">1.0</span> điểm</span>
+                        </div>
+                        <div class="flex-1 max-w-md">
+                            <input type="text" id="ea-comment-input" placeholder="Gõ lời phê cho học sinh..." class="w-full px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs font-medium text-white outline-none">
+                        </div>
+                        <button type="button" id="ea-save-btn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs uppercase shadow-lg transition active:scale-95">💾 Lưu kết quả chấm</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            const canvas = document.getElementById('ea-canvas');
+            const ctx = canvas.getContext('2d');
+            const scoreInp = document.getElementById('ea-score-input');
+            const maxPtsSpan = document.getElementById('ea-max-pts');
+            const commentInp = document.getElementById('ea-comment-input');
+            const closeBtn = document.getElementById('ea-close-btn');
+            const saveBtn = document.getElementById('ea-save-btn');
+            const undoBtn = document.getElementById('ea-undo-btn');
+            const clearBtn = document.getElementById('ea-clear-btn');
+            const toolBtns = modal.querySelectorAll('.ea-tool-btn');
+
+            const maxPts = q.pts || 1.0;
+            maxPtsSpan.textContent = fmtPoints(maxPts);
+            scoreInp.max = maxPts;
+            scoreInp.value = maxPts;
+
+            let currentTool = 'correct';
+            let annotations = [];
+            let bgImage = new Image();
+            bgImage.src = images[0];
+
+            toolBtns.forEach(b => {
+                b.onclick = () => {
+                    toolBtns.forEach(x => { x.classList.remove('bg-emerald-600', 'bg-red-700', 'bg-amber-600', 'bg-purple-600'); x.classList.add('bg-slate-800'); });
+                    currentTool = b.getAttribute('data-tool');
+                    const colorMap = { correct: 'bg-emerald-600', incorrect: 'bg-red-700', circle: 'bg-amber-600', pen: 'bg-purple-600' };
+                    b.classList.remove('bg-slate-800');
+                    b.classList.add(colorMap[currentTool] || 'bg-emerald-600');
+                };
+            });
+
+            const redraw = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+                annotations.forEach(an => {
+                    ctx.save();
+                    if (an.type === 'correct') {
+                        // Vẽ dấu tick xanh
+                        ctx.strokeStyle = '#16a34a';
+                        ctx.lineWidth = 5;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(an.x - 14, an.y);
+                        ctx.lineTo(an.x - 4, an.y + 12);
+                        ctx.lineTo(an.x + 18, an.y - 12);
+                        ctx.stroke();
+                    } else if (an.type === 'incorrect') {
+                        // Vẽ dấu gạch chéo đỏ
+                        ctx.strokeStyle = '#dc2626';
+                        ctx.lineWidth = 5;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(an.x - 12, an.y - 12);
+                        ctx.lineTo(an.x + 12, an.y + 12);
+                        ctx.moveTo(an.x + 12, an.y - 12);
+                        ctx.lineTo(an.x - 12, an.y + 12);
+                        ctx.stroke();
+                    } else if (an.type === 'circle') {
+                        ctx.strokeStyle = '#eab308';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(an.x, an.y, an.r || 24, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else if (an.type === 'pen' && Array.isArray(an.pts)) {
+                        ctx.strokeStyle = '#dc2626';
+                        ctx.lineWidth = 4;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        an.pts.forEach((p, idx) => {
+                            if (idx === 0) ctx.moveTo(p.x, p.y);
+                            else ctx.lineTo(p.x, p.y);
+                        });
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                });
+            };
+
+            bgImage.onload = () => {
+                // Đặt kích thước canvas theo ảnh
+                canvas.width = bgImage.naturalWidth || 800;
+                canvas.height = bgImage.naturalHeight || 1100;
+                annotations = [];
+                redraw();
+            };
+
+            let isDrawing = false;
+            let activePenPts = [];
+
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            };
+
+            canvas.onmousedown = canvas.ontouchstart = (e) => {
+                e.preventDefault();
+                const pos = getPos(e);
+                if (currentTool === 'correct' || currentTool === 'incorrect' || currentTool === 'circle') {
+                    annotations.push({ type: currentTool, x: pos.x, y: pos.y, r: 26 });
+                    redraw();
+                } else if (currentTool === 'pen') {
+                    isDrawing = true;
+                    activePenPts = [pos];
+                }
+            };
+
+            canvas.onmousemove = canvas.ontouchmove = (e) => {
+                if (!isDrawing || currentTool !== 'pen') return;
+                e.preventDefault();
+                const pos = getPos(e);
+                activePenPts.push(pos);
+                redraw();
+                ctx.save();
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                activePenPts.forEach((p, idx) => {
+                    if (idx === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                });
+                ctx.stroke();
+                ctx.restore();
+            };
+
+            canvas.onmouseup = canvas.ontouchend = () => {
+                if (isDrawing && currentTool === 'pen' && activePenPts.length > 1) {
+                    annotations.push({ type: 'pen', pts: activePenPts });
+                    activePenPts = [];
+                }
+                isDrawing = false;
+                redraw();
+            };
+
+            undoBtn.onclick = () => {
+                annotations.pop();
+                redraw();
+            };
+
+            clearBtn.onclick = () => {
+                annotations = [];
+                redraw();
+            };
+
+            closeBtn.onclick = () => modal.classList.add('hidden');
+
+            saveBtn.onclick = () => {
+                const finalScore = parseFloat(scoreInp.value) || 0;
+                const finalComment = commentInp.value.trim();
+                const mergedImgData = canvas.toDataURL('image/jpeg', 0.85);
+                modal.classList.add('hidden');
+                if (typeof onSaveCallback === 'function') {
+                    onSaveCallback(finalScore, finalComment, mergedImgData);
+                }
+            };
+
+            modal.classList.remove('hidden');
+        }
+
         function buildQuestionCard(q, idx, num, reviewing) {
             const t = qType(q);
             const userAns = isPrintingMode ? undefined : userAnswers[q.id];
@@ -9057,6 +9705,11 @@ function findVercelStudent(query) {
             qTitle.className = 'q-title-text math-content text-[20px] font-normal text-slate-900 leading-snug mb-2';
             qTitle.innerHTML = `<strong class="q-label-bold font-bold">${window.CODE121EN ? CODE121EN.label(q) : 'Câu'} ${num}. </strong><span class="q-stem-normal font-normal">${formatMathAndChemHTML(q.text, { center: true })}</span>`;
             qCard.appendChild(qTitle);
+
+            // ---------- PHẦN IV: CÂU HỎI TỰ LUẬN ----------
+            if (t === 'tl') {
+                return buildEssayQuestionCard(q, idx, num, reviewing, userAns, isLocked, qCard, qTitle);
+            }
 
             // ---------- PHẦN II: ĐÚNG - SAI (mỗi ý a, b, c, d có ô trả lời Đúng / Sai) ----------
             if (t === 'tf') {
@@ -12972,7 +13625,9 @@ function findVercelStudent(query) {
             const counters = { mc: 0, tf: 0, sa: 0 };
 
             if (badgeEl) {
-                badgeEl.textContent = `${draft.length} câu • I: ${cnt.mc} • II: ${cnt.tf} • III: ${cnt.sa} (${resolved} đã có đáp án)`;
+                let badgeTxt = `${draft.length} câu • I: ${cnt.mc} • II: ${cnt.tf} • III: ${cnt.sa}`;
+                if (cnt.tl > 0) badgeTxt += ` • IV: ${cnt.tl}`;
+                badgeEl.textContent = `${badgeTxt} (${resolved} đã có đáp án)`;
             }
 
             if (reportEl) {
@@ -13026,6 +13681,8 @@ function findVercelStudent(query) {
                     statusBadge = q.detectedByStyle
                         ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full ${len > 4 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}">${len > 4 ? '⚠ Dài hơn 4 ký tự:' : '✓ Trả lời:'} ${impEsc(q.shortAnswer)}</span>`
                         : `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">⚠ Chưa có đáp án (nhập ô Trả lời)</span>`;
+                } else if (t === 'tl') {
+                    statusBadge = `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">📝 Câu tự luận (${fmtPoints(q.pts || 1.0)} điểm)</span>`;
                 } else {
                     statusBadge = q.detectedByStyle
                         ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">✓ Đáp án ${optLabels[q.correctIndex]}${q.weakStyle ? ' (suy đoán theo chữ đậm)' : ''}</span>`
@@ -16746,17 +17403,20 @@ function findVercelStudent(query) {
             if (plain.length > 220) return null;
             const isPartWord = /^\s*(?:phần|phan|part)\s*(?:[IVX]+|\d)\b/i.test(plain);
             const hasTracNghiem = /trắc\s*nghiệm/i.test(plain);
-            if (!isPartWord && !(hasTracNghiem && plain.length < 160)) return null;
+            const hasTuLuan = /tự\s*luận|tu\s*luan|essay|writing/i.test(plain);
+            if (!isPartWord && !(hasTracNghiem && plain.length < 160) && !(hasTuLuan && plain.length < 160)) return null;
             const p = plain.toLowerCase();
+            if (/tự\s*luận|tu\s*luan|essay|writing/.test(p)) return 'tl';
             if (/trả\s*lời\s*ngắn/.test(p)) return 'sa';
             if (/đúng\s*[-–—\/,]?\s*(?:hoặc\s*)?sai/.test(p)) return 'tf';
             if (/nhiều\s*(?:lựa\s*chọn|phương\s*án)|lựa\s*chọn|phương\s*án|một\s*đáp\s*án/.test(p)) return 'mc';
             if (hasTracNghiem) return 'mc';
             if (isPartWord) {
-                // [CODE33] Tiêu đề chỉ ghi "PHẦN III: ..." -> suy ra dạng theo số phần (I = nhiều lựa chọn, II = đúng/sai, III = trả lời ngắn)
-                const pm = p.match(/^\s*(?:phần|phan|part)\s*(iii|ii|i|3|2|1)\b/i);
+                // [CODE33] Tiêu đề chỉ ghi "PHẦN III: ..." -> suy ra dạng theo số phần (I = nhiều lựa chọn, II = đúng/sai, III = trả lời ngắn, IV = tự luận)
+                const pm = p.match(/^\s*(?:phần|phan|part)\s*(iv|iii|ii|i|4|3|2|1)\b/i);
                 if (pm) {
                     const v = pm[1].toLowerCase();
+                    if (v === 'iv' || v === '4') return 'tl';
                     return (v === 'iii' || v === '3') ? 'sa' : (v === 'ii' || v === '2') ? 'tf' : 'mc';
                 }
                 return '';
@@ -16921,6 +17581,40 @@ function findVercelStudent(query) {
             const compact = a.replace(/\s+/g, '');
             a = compact.length <= 8 ? compact : a.split(/\s+/)[0];
             return a.replace(/[\.\;]+$/, '');
+        }
+
+        function parseTLBlock(blockLines, report) {
+            const kept = [], sol = [];
+            let inSol = false;
+            blockLines.forEach((line, i) => {
+                const p = richToPlain(line).trim();
+                if (!inSol && i > 0 && EXAM_SOLUTION_RE.test(p)) inSol = true;
+                (inSol ? sol : kept).push(line);
+            });
+            const keptRich = joinRichLines(kept);
+            const numM = richToPlain(blockLines[0]).trim().match(EXAM_Q_NUM_RE);
+            const num = numM ? parseInt(numM[1], 10) : null;
+            const stem = richToFormattedString(keptRich).trim();
+            const solutionText = sol.length ? richToFormattedString(joinRichLines(sol)).trim() : '';
+
+            // Điểm số mặc định nếu đề có ghi (VD "(1,5 điểm)" hoặc "(2 điểm)")
+            let pts = 1.0;
+            const ptsM = stem.match(/\(\s*(\d+(?:[,\.]\d+)?)\s*(?:đ|điểm|pts?)\s*\)/i);
+            if (ptsM) {
+                const v = parseFloat(ptsM[1].replace(',', '.'));
+                if (isFinite(v) && v > 0) pts = v;
+            }
+
+            return {
+                id: 'q_' + Math.random().toString(36).slice(2, 9),
+                type: 'tl',
+                num,
+                text: stem,
+                options: [],
+                solution: solutionText,
+                pts,
+                detectedByStyle: true
+            };
         }
 
         function parseSABlock(blockLines, report) {
@@ -17192,9 +17886,10 @@ function findVercelStudent(query) {
                 if (!p) return;
                 const pLow = p.toLowerCase();
                 let st = null;
-                if (/trả\s*lời\s*ngắn/.test(pLow) || /phần\s*(?:iii|3)\b/i.test(pLow)) st = 'sa';
+                if (/tự\s*luận/.test(pLow) || /phần\s*(?:iv|4)\b/i.test(pLow)) st = 'tl';
+                else if (/trả\s*lời\s*ngắn/.test(pLow) || /phần\s*(?:iii|3)\b/i.test(pLow)) st = 'sa';
                 else if (/đúng\s*[-–—\/,]?\s*(?:hoặc\s*)?sai/.test(pLow) || /phần\s*(?:ii|2)\b/i.test(pLow)) st = 'tf';
-                else if (/nhiều\s*(?:lựa\s*chọn|phương\s*án)|phần\s*(?:i|1)\b/i.test(pLow)) st = 'mc';
+                else if (/nhiều\s*(?:lựa\s*chọn|phương\s*án)|phần\s*(?:i|1)/i.test(pLow)) st = 'mc';
                 
                 if (st) {
                     curSec = { type: st, lines: [], plains: [] };
@@ -17217,6 +17912,7 @@ function findVercelStudent(query) {
             const mcQs = out.filter(q => q.type === 'mc');
             const tfQs = out.filter(q => q.type === 'tf');
             const saQs = out.filter(q => q.type === 'sa');
+            const tlQs = out.filter(q => q.type === 'tl');
 
             let appliedCount = 0;
 
@@ -17234,7 +17930,7 @@ function findVercelStudent(query) {
                     }
                 });
 
-                const targetList = sec.type === 'tf' ? tfQs : (sec.type === 'sa' ? saQs : (sec.type === 'mc' ? mcQs : out));
+                const targetList = sec.type === 'tl' ? tlQs : (sec.type === 'tf' ? tfQs : (sec.type === 'sa' ? saQs : (sec.type === 'mc' ? mcQs : out)));
 
                 blocks.forEach((b, bIdx) => {
                     const nm = b.plains[0].match(qNumRe);
@@ -17447,11 +18143,18 @@ function parseExamRichLines(richLines) {
             const pushSa = ls => {
                 splitExamBlocks(ls).forEach(b => out.push(parseSABlock(b, report)));
             };
+            const pushTl = ls => {
+                splitExamBlocks(ls).forEach(b => {
+                    const q = parseTLBlock(b, report);
+                    if (q) out.push(q);
+                });
+            };
 
             const processSection = sec => {
                 if (sec.type === 'mc') { pushMc(sec.lines); return; }
                 if (sec.type === 'tf') { pushTf(sec.lines); return; }
                 if (sec.type === 'sa') { pushSa(sec.lines); return; }
+                if (sec.type === 'tl') { pushTl(sec.lines); return; }
 
                 // Đoạn không có tiêu đề phần: tự đoán dạng theo từng câu
                 const blocks = splitExamBlocks(sec.lines);
@@ -17503,7 +18206,9 @@ function parseExamRichLines(richLines) {
             const c = countByType(out);
             if (out.length > 0) {
                 const solCnt = out.filter(q => String(q.solution || '').trim() || (Array.isArray(q.tfSol) && q.tfSol.some(x => String(x || '').trim()))).length;
-                report.warnings.unshift(`Đã nhận diện: Phần I = ${c.mc} câu • Phần II = ${c.tf} câu • Phần III = ${c.sa} câu • Có lời giải: ${solCnt}/${out.length} câu.`);
+                let partInfo = `Phần I = ${c.mc} câu • Phần II = ${c.tf} câu • Phần III = ${c.sa} câu`;
+                if (c.tl > 0) partInfo += ` • Phần IV (Tự luận) = ${c.tl} câu`;
+                report.warnings.unshift(`Đã nhận diện: ${partInfo} • Có lời giải: ${solCnt}/${out.length} câu.`);
             }
             const grpTotal = new Set(out.filter(q => q.gid).map(q => q.gid)).size;
             if (grpTotal > 0) {
