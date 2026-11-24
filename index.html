@@ -2911,6 +2911,9 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                             <button type="button" id="btn-import-bank" onclick="CODE153.openImport()" title="Lấy câu hỏi từ NGÂN HÀNG ĐỀ theo bài, theo chương hoặc cả khối" class="px-4 py-2 rounded-full font-black text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 shadow-sm text-xs uppercase flex items-center gap-1.5 transition-transform active:scale-95">
                                 📚 NHẬP TỪ NGÂN HÀNG ĐỀ
                             </button>
+                            <button type="button" id="btn-import-answer-key" onclick="openAnswerKeyModal('editor')" title="Dán bảng đáp án Phần I, II, III (Chuẩn đề 2025 GDPT 2018)" class="px-4 py-2 rounded-full font-black text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 shadow-sm text-xs uppercase flex items-center gap-1.5 transition-transform active:scale-95">
+                                📋 BẢNG ĐÁP ÁN (I, II, III)
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -3036,10 +3039,15 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                             <input type="file" id="word-file-input" accept=".docx" onchange="handleWordFileSelect(event)" class="hidden">
                         </div>
 
-                        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                            <label class="block text-xs font-black text-slate-800 uppercase">⚡ Nhập nhanh chuỗi đáp án đúng (Tùy chọn):</label>
-                            <input type="text" id="word-quick-answer-input" oninput="applyQuickAnswerKey('word')" placeholder="VD: 1A 2B 3C 4D... hoặc ABCDABCD..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-black text-sky-700 uppercase outline-none focus:border-sky-500">
-                            <p class="text-[11px] font-bold text-slate-400">Chỉ áp dụng cho Phần I (nhiều lựa chọn) khi file Word chưa đánh dấu đáp án đúng. Gõ chuỗi chữ cái (ABCD...) hoặc (1A 2C 3B...) để gán hàng loạt.</p>
+                        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
+                            <div class="flex items-center justify-between gap-1">
+                                <label class="block text-xs font-black text-slate-800 uppercase">⚡ Đáp án (Phần I, II, III)</label>
+                                <button type="button" onclick="openAnswerKeyModal('word')" class="text-[11px] font-black text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-xl border border-sky-300 transition shadow-xs flex items-center gap-1 active:scale-95">
+                                    <span>📋</span> <span>Dán bảng đáp án</span>
+                                </button>
+                            </div>
+                            <input type="text" id="word-quick-answer-input" oninput="applyQuickAnswerKey('word')" placeholder="Gõ chuỗi 1A 2B... hoặc dán bảng đáp án vào đây" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-black text-sky-700 uppercase outline-none focus:border-sky-500">
+                            <p class="text-[11px] font-bold text-slate-400 leading-tight">Tự động nhận diện cả 3 phần: Phần I (A,B,C,D) • Phần II (Đúng/Sai) • Phần III (Trả lời ngắn). Hoặc bấm "Dán bảng đáp án" để dán nguyên bảng.</p>
                         </div>
 
                         <div class="bg-sky-50 p-3 rounded-xl border border-sky-300 shadow-sm text-[11px] font-bold text-sky-900 leading-snug">
@@ -12610,16 +12618,129 @@ function findVercelStudent(query) {
         }
 
         // Nhập nhanh chuỗi đáp án Phần I: "1A 2B 3C..." hoặc "ABCDABCD..." (chỉ áp dụng cho câu nhiều lựa chọn)
+        
+        // ============================================================
+        // ĐIỀU KHIỂN MODAL NHẬP BẢNG ĐÁP ÁN (PHẦN I, II, III)
+        // ============================================================
+        let currentAnswerKeyTarget = 'word';
+
+        function openAnswerKeyModal(target = 'word') {
+            currentAnswerKeyTarget = target;
+            const modal = document.getElementById('answer-key-modal');
+            if (!modal) return;
+            const tx = document.getElementById('answer-key-textarea');
+            if (tx) tx.value = '';
+            const st = document.getElementById('answer-key-preview-stats');
+            if (st) { st.innerHTML = ''; st.classList.add('hidden'); }
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                if (tx) tx.focus();
+            }, 10);
+        }
+
+        function closeAnswerKeyModal() {
+            const modal = document.getElementById('answer-key-modal');
+            if (!modal) return;
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function previewAnswerKeyAnalysis() {
+            const tx = document.getElementById('answer-key-textarea');
+            const st = document.getElementById('answer-key-preview-stats');
+            if (!tx || !st) return;
+            const val = tx.value.trim();
+            if (!val) {
+                st.classList.add('hidden');
+                st.innerHTML = '';
+                return;
+            }
+            const comp = parseComprehensiveAnswerKey(val);
+            if (!comp || comp.totalFound === 0) {
+                st.className = 'p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800';
+                st.innerHTML = '⚠️ Chưa nhận diện được đáp án. Hãy dán bảng theo mẫu (Phần I, II, III).';
+                st.classList.remove('hidden');
+                return;
+            }
+            const mcCnt = Object.keys(comp.mc).length;
+            const tfCnt = Object.keys(comp.tf).length;
+            const saCnt = Object.keys(comp.sa).length;
+            st.className = 'p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800';
+            st.innerHTML = `
+                <div class="flex items-center gap-2 mb-1.5 text-emerald-900 font-black">
+                    <span>✨ Đã nhận diện thành công ${comp.totalFound} đáp án:</span>
+                </div>
+                <div class="flex flex-wrap gap-2 text-[11px] font-black">
+                    ${mcCnt > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-sky-100 text-sky-800 border border-sky-300">Phần I (Trắc nghiệm): ${mcCnt} câu</span>` : ''}
+                    ${tfCnt > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-800 border border-indigo-300">Phần II (Đúng/Sai): ${tfCnt} câu</span>` : ''}
+                    ${saCnt > 0 ? `<span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-300">Phần III (Trả lời ngắn): ${saCnt} câu</span>` : ''}
+                </div>
+            `;
+            st.classList.remove('hidden');
+        }
+
+        function applyAnswerKeyFromModal() {
+            const tx = document.getElementById('answer-key-textarea');
+            if (!tx) return;
+            const val = tx.value.trim();
+            if (!val) {
+                showModal('Thông báo', 'Vui lòng dán nội dung bảng đáp án trước khi áp dụng.', 'warning');
+                return;
+            }
+            const comp = parseComprehensiveAnswerKey(val);
+            if (!comp || comp.totalFound === 0) {
+                showModal('Chưa nhận diện được đáp án', 'Hệ thống chưa tìm thấy đáp án hợp lệ từ nội dung vừa dán. Vui lòng kiểm tra lại cấu trúc bảng.', 'info');
+                return;
+            }
+
+            let targetDraft = [];
+            if (currentAnswerKeyTarget === 'editor') {
+                if (typeof syncEditorDOMToDraft === 'function') syncEditorDOMToDraft();
+                targetDraft = editorDraftQuestions;
+            } else {
+                targetDraft = wordImportDraft;
+            }
+
+            if (!targetDraft || targetDraft.length === 0) {
+                showModal('Chưa có câu hỏi', 'Hiện chưa có câu hỏi nào để áp dụng đáp án. Vui lòng nạp hoặc thêm câu hỏi trước.', 'info');
+                return;
+            }
+
+            const applied = applyComprehensiveAnswerKey(comp, targetDraft);
+            if (currentAnswerKeyTarget === 'editor') {
+                if (typeof renderEditorForm === 'function') renderEditorForm();
+            } else {
+                if (typeof renderWordImportPreview === 'function') renderWordImportPreview();
+            }
+            closeAnswerKeyModal();
+
+            const mcCnt = Object.keys(comp.mc).length;
+            const tfCnt = Object.keys(comp.tf).length;
+            const saCnt = Object.keys(comp.sa).length;
+            showModal('Thành công', `✓ Đã áp dụng thành công ${applied} đáp án vào đề thi!\n• Phần I: ${mcCnt} câu\n• Phần II: ${tfCnt} câu\n• Phần III: ${saCnt} câu`, 'success');
+        }
+
         function applyQuickAnswerKey(kind) {
             const draft = getImportDraft(kind);
             const inputEl = document.getElementById(`${kind}-quick-answer-input`);
             if (!inputEl || draft.length === 0) return;
-            const raw = inputEl.value.trim().toUpperCase();
+            const raw = inputEl.value.trim();
             if (!raw) return;
+
+            // 1. Thử nhận diện bằng bộ phân tích toàn diện (Phần I, II, III)
+            const comp = parseComprehensiveAnswerKey(raw);
+            if (comp && comp.totalFound > 0) {
+                applyComprehensiveAnswerKey(comp, draft);
+                renderImportPreview(kind);
+                return;
+            }
+
+            // 2. Dự phòng: chuỗi ký tự ABCD thuần túy cho Phần I
             const mcList = draft.filter(q => qType(q) === 'mc');
             if (mcList.length === 0) return;
-
-            const numberedMatches = [...raw.matchAll(/(\d{1,3})\s*[\.\:\-\)]?\s*([A-D])/g)];
+            const upper = raw.toUpperCase();
+            const numberedMatches = [...upper.matchAll(/(\d{1,3})\s*[\.\:\-\)]?\s*([A-D])/g)];
             if (numberedMatches.length > 0) {
                 numberedMatches.forEach(m => {
                     const qIdx = parseInt(m[1], 10) - 1;
@@ -12631,7 +12752,7 @@ function findVercelStudent(query) {
                     }
                 });
             } else {
-                const lettersOnly = raw.replace(/[^A-D]/g, '');
+                const lettersOnly = upper.replace(/[^A-D]/g, '');
                 for (let i = 0; i < Math.min(lettersOnly.length, mcList.length); i++) {
                     const optIdx = ['A', 'B', 'C', 'D'].indexOf(lettersOnly[i]);
                     if (optIdx !== -1) {
@@ -15709,7 +15830,7 @@ function findVercelStudent(query) {
         const EXAM_Q_NUM_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?)?(\d+)/i;
         const EXAM_STEM_CLEAN_RE = /^\s*[\•\-\*\u200B\uFEFF]*\s*(?:(?:câu|cau|question|bài|bai)\s*(?:số\s*)?\d+\s*[\.\:\-\)\/]?|\d+\s*[\.\)\:])\s*/i;
         const EXAM_SOLUTION_RE = /^\s*(?:lời\s+giải|hướng\s+dẫn(?:\s+giải)?|giải\s+thích|giải\s*[:\.]|bài\s+giải|gợi\s+ý)/i;
-        const EXAM_STOP_RE = /^\s*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:bảng\s+)?đáp\s+án(?:\s+(?:tham\s+khảo|chi\s+tiết|đúng))?\s*[:\.]?\s*$|bảng\s+đáp\s+án|hướng\s+dẫn\s+chấm|hướng\s+dẫn\s+giải\s*$)/i;
+        const EXAM_STOP_RE = /^\s*(?:[-=_*]{2,}\s*hết\s*[-=_*]{2,}|hết\s*[\.\!]?\s*$|(?:bảng\s+)?đáp\s+án(?:\s+(?:đề\s+kiểm\s+tra|tham\s+khảo|chi\s+tiết|đúng))?.*$|bảng\s+đáp\s+án.*$|hướng\s+dẫn\s+chấm.*$|hướng\s+dẫn\s+giải\s*$|thang\s+điểm.*$)/i;
         const EXAM_INSTRUCTION_RE = /^\s*(?:thí\s*sinh|mỗi\s*câu|trong\s*mỗi|câu\s+trắc\s+nghiệm|chỉ\s*chọn|lưu\s*ý|hướng\s*dẫn\s*làm)/i;
 
         // Trả về: 'mc' | 'tf' | 'sa' (dòng là tiêu đề phần), '' (tiêu đề phần nhưng chưa rõ dạng), null (không phải tiêu đề)
@@ -16250,6 +16371,23 @@ function findVercelStudent(query) {
                 processSection(sec);
                 tagQuestionGroups(out.slice(before), gx.groups);
             });
+
+            // [MỚI] Tự động nhận diện bảng đáp án toàn diện (Phần I, II, III) từ tail hoặc richLines
+            try {
+                const candidateLines = (tail && tail.length >= 2) ? tail : richLines;
+                const compKeys = parseComprehensiveAnswerKey(candidateLines);
+                if (compKeys && compKeys.totalFound > 0) {
+                    const applied = applyComprehensiveAnswerKey(compKeys, out);
+                    if (applied > 0) {
+                        const mcFound = Object.keys(compKeys.mc).length;
+                        const tfFound = Object.keys(compKeys.tf).length;
+                        const saFound = Object.keys(compKeys.sa).length;
+                        report.warnings.unshift(`✨ Đã tự động nhận diện bảng đáp án (${applied} câu): Phần I (${mcFound} câu) • Phần II (${tfFound} câu) • Phần III (${saFound} câu).`);
+                    }
+                }
+            } catch (errKey) {
+                console.error('Lỗi nhận diện bảng đáp án tự động:', errKey);
+            }
 
             // 3. Báo cáo kiểm tra
             const c = countByType(out);
