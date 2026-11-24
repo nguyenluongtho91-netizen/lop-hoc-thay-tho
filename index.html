@@ -1192,52 +1192,54 @@ Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
         @media (max-width: 700px) { #left-sidebar #btn-mix-sidebar { display: none !important; } }
         #left-sidebar .side-btn:active { transform: scale(0.96); }
     
-        /* ===== [CODE-BEAUTIFY] BÓC TÁCH CÂN CHỈNH THẨM MỸ CÂU HỎI ===== */
+        /* ===== [CODE-BEAUTIFY] BÓC TÁCH CÂN CHỈNH CÂU HỎI CHUẨN PHOM ĐỀ GỐC ===== */
         .q-stem-sublist {
-            margin: 6px 0 8px 4px;
-            padding: 6px 12px 6px 14px;
-            border-left: 3px solid #6366f1;
-            background: #f8fafc;
-            border-radius: 0 10px 10px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .q-stem-sublist.q-sublist-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 6px 20px;
+            margin: 4px 0 6px 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 3px !important;
         }
         .q-stem-subitem {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            font-size: 14px !important;
-            line-height: 1.5 !important;
-            font-family: 'Roboto', 'Segoe UI', sans-serif !important;
+            display: flex !important;
+            align-items: flex-start !important;
+            padding-left: 16px !important;
+            font-size: inherit !important;
+            line-height: inherit !important;
+            color: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
         }
         .q-stem-subitem .q-sub-label {
-            color: #4338ca !important;
+            color: inherit !important;
             font-weight: 700 !important;
-            flex-shrink: 0;
+            flex-shrink: 0 !important;
+            margin-right: 4px !important;
         }
         .q-stem-subitem .q-sub-text {
-            flex: 1;
-            min-width: 0;
+            flex: 1 !important;
+            min-width: 0 !important;
+            color: inherit !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
         }
         .q-reaction-block {
             text-align: center !important;
-            margin: 8px auto !important;
-            padding: 6px 14px !important;
-            background: #f1f5f9 !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            font-size: 14px !important;
-            line-height: 1.5 !important;
-            max-width: 96% !important;
+            margin: 6px 0 !important;
+            padding: 2px 0 !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            font-weight: inherit !important;
+            font-size: inherit !important;
+            line-height: inherit !important;
+            color: inherit !important;
+            box-shadow: none !important;
             display: block !important;
-            font-family: 'Roboto', 'Segoe UI', sans-serif !important;
+            font-family: inherit !important;
         }
 
         /* ===== [CODE17] Phần II (đúng - sai) & Phần III (trả lời ngắn) ===== */
@@ -7652,14 +7654,24 @@ function findVercelStudent(query) {
 
             let s = text.trim();
 
-            // Dạng 1: Các nhãn trong ngoặc đơn (a), (b), (c)... hoặc (1), (2), (3)... hoặc (I), (II)...
-            const parensLabels = (s.match(/\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\)/g) || []);
-            if (parensLabels.length >= 2) {
+            // KIỂM TRA CHẶT CHẼ: Phải có cặp nhãn tuần tự thực sự trong đề:
+            // 1) Dạng chữ thường: (a) và (b)
+            const hasAB = /\(a\)/i.test(s) && /\(b\)/i.test(s);
+            // 2) Dạng số: (1) và (2)
+            const has12 = /\(1\)/.test(s) && /\(2\)/.test(s);
+            // 3) Dạng La Mã: (I) và (II) hoặc (i) và (ii)
+            const hasRoman = /\((?:I|i)\)/.test(s) && /\((?:II|ii)\)/.test(s);
+            // 4) Dạng a) và b)
+            const hasAbNoParen = /(?:^|\s)a\)\s+/.test(s) && /(?:^|\s)b\)\s+/.test(s);
+
+            if (hasAB || has12 || hasRoman) {
                 // Tách câu dẫn nhập nếu dính liền với nhãn đầu tiên (VD: "Cho các yếu tố sau: (a) ...")
-                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\))/gi, '$1\n$2');
-                
-                // Ngắt dòng trước các nhãn tiếp theo (b), (c), (d)...
-                s = s.replace(/([,\;]?)\s+(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\))\s+/g, (match, punct, label, offset) => {
+                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*(\((?:[a-h]|\d{1,2}|[ivx]{1,4}|I{1,3}|IV)\))/gi, '$1\n$2');
+
+                // Ngắt dòng trước các nhãn tiếp theo (b), (c), (d)... hoặc (2), (3)...
+                // TUYỆT ĐỐI CHỈ NHẬN: chữ thường [a-h], số 1-99, hoặc La Mã (i, ii, iii, iv hoặc I, II, III, IV)
+                // KHÔNG BAO GIỜ NHẬN (X), (Y), (Z)... (tránh lỗi chất khí X)
+                s = s.replace(/([,\;]?)\s+(\((?:[a-h]|\d{1,2}|i{1,3}|iv|v|I{1,3}|IV|V)\))\s+/g, (match, punct, label, offset) => {
                     if (offset === 0) return label + ' ';
                     return '\n' + label + ' ';
                 });
@@ -7667,13 +7679,9 @@ function findVercelStudent(query) {
                 // Tách câu hỏi chốt ở cuối nếu dính liền với ý cuối cùng
                 const trailingQRe = /([\.?!;]?)\s+((?:có\s+bao\s+nhiêu|số\s+(?:lượng|phản\s*ứng|yếu\s*tố|phát\s*biểu|thí\s*nghiệm|ứng\s*dụng|chất|đồng\s*phân|chất\s*khí|kết\s*tủa|dung\s*dịch|nhận\s*định|nhận\s*xét|khẳng\s*định|mệnh\s*đề|hàm\s*số|giá\s*trị|nghiệm|phương\s*trình|đặc\s*điểm|câu|ý)|hãy\s*cho\s*biết|dãy\s*gồm|trong\s*các\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|thí\s*nghiệm|chất|mệnh\s*đề|khẳng\s*định|đặc\s*điểm)\s*trên|những\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|khẳng\s*định|mệnh\s*đề|đặc\s*điểm)\s*nào|yếu\s*tố\s*nào|phát\s*biểu\s*nào|mệnh\s*đề\s*nào|khẳng\s*định\s*nào|chất\s*nào)(?![A-Za-zÀ-ỹ0-9])[^\n]+)$/i;
                 s = s.replace(trailingQRe, (m, p, q) => '\n' + q);
-            }
-
-            // Dạng 2: Các nhãn dạng 1), 2), 3) hoặc a), b), c) nếu dính liền trên 1 dòng
-            const noParenLabels = (s.match(/(?:^|\s)([a-hA-H]|\d{1,2})\)\s+/g) || []);
-            if (noParenLabels.length >= 2) {
-                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*([a-hA-H]|\d{1,2}\))/gi, '$1\n$2');
-                s = s.replace(/([,\;]?)\s+([a-hA-H]|\d{1,2})\)\s+/g, '\n$2) ');
+            } else if (hasAbNoParen) {
+                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*([a-h]\))/gi, '$1\n$2');
+                s = s.replace(/([,\;]?)\s+([b-h]\))\s+/g, '\n$2 ');
             }
 
             // Tách phương trình phản ứng hóa học đứng giữa văn bản nếu dính liền với câu dẫn
@@ -7691,12 +7699,10 @@ function findVercelStudent(query) {
 
             const flushSubItems = () => {
                 if (!subItems.length) return;
-                const allShort = subItems.every(it => it.text.length < 55);
-                const gridClass = allShort ? 'q-stem-sublist q-sublist-grid' : 'q-stem-sublist';
                 const inner = subItems.map(it => 
                     `<div class="q-stem-subitem"><b class="q-sub-label">${it.label}</b><span class="q-sub-text">${it.text}</span></div>`
                 ).join('');
-                out.push(`<div class="${gridClass}">${inner}</div>`);
+                out.push(`<div class="q-stem-sublist">${inner}</div>`);
                 subItems = [];
             };
 
@@ -7704,7 +7710,7 @@ function findVercelStudent(query) {
                 const trimmed = line.trim();
                 if (!trimmed) return;
 
-                const m = trimmed.match(/^(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\)|(?:[a-hA-H]|\d{1,2})\))\s*(.*)$/);
+                const m = trimmed.match(/^(\((?:[a-h]|\d{1,2}|i{1,3}|iv|v|I{1,3}|IV|V)\)|(?:[a-h]|\d{1,2})\))\s*(.*)$/);
                 if (m) {
                     subItems.push({ label: m[1], text: m[2] });
                 } else {
