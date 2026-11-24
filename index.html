@@ -2211,7 +2211,7 @@ body.pwa-installed #btn-header-install {
             </div>
         </div>
 
-        <div id="login-modal" class="absolute inset-0 bg-slate-900/75 backdrop-blur-sm z-[80] flex justify-center items-center transition-opacity duration-300 no-print">
+        <div id="login-modal" class="hidden opacity-0 absolute inset-0 bg-slate-900/75 backdrop-blur-sm z-[80] flex justify-center items-center transition-opacity duration-300 no-print">
             <div class="bg-white rounded-3xl w-[92%] max-w-md max-h-[94%] shadow-2xl border-4 border-indigo-200 overflow-y-auto">
                 <div id="login-hero" class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-500 px-6 py-5 text-center text-white relative">
                     <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur mx-auto flex items-center justify-center mb-2 shadow-inner border border-white/30">
@@ -2282,10 +2282,16 @@ body.pwa-installed #btn-header-install {
                         </div>
                     </div>
 
-                    <label id="login-showpass-wrap" class="flex items-center gap-2 text-xs font-black text-slate-600 cursor-pointer select-none">
-                        <input id="login-showpass-check" type="checkbox" onchange="toggleLoginPassVisibility(this.checked)" class="w-4 h-4 accent-emerald-600">
-                        Hiện mật khẩu
-                    </label>
+                    <div class="flex items-center justify-between gap-2 text-xs font-black text-slate-600 flex-wrap">
+                        <label id="login-showpass-wrap" class="flex items-center gap-2 cursor-pointer select-none">
+                            <input id="login-showpass-check" type="checkbox" onchange="toggleLoginPassVisibility(this.checked)" class="w-4 h-4 accent-emerald-600">
+                            Hiện mật khẩu
+                        </label>
+                        <label id="login-remember-wrap" class="flex items-center gap-2 text-indigo-700 cursor-pointer select-none" title="Lưu phiên đăng nhập vĩnh viễn trên máy này để không cần nhập lại mật khẩu khi mở app">
+                            <input id="login-remember-check" type="checkbox" checked class="w-4 h-4 accent-indigo-600">
+                            <span>Lưu đăng nhập trên máy này</span>
+                        </label>
+                    </div>
 
                     <div id="login-gv-hint" class="bg-amber-50 border-2 border-amber-200 text-amber-800 rounded-xl px-3.5 py-2 text-[11px] font-bold leading-snug">
                         💡 Lần đầu sử dụng: hãy tạo mật khẩu Giáo viên (tối thiểu 4 ký tự). Những lần sau chỉ cần nhập mật khẩu. Hãy tạo mật khẩu trên máy tính trước, rồi bấm "Tải index.html" và tải lên GitHub.
@@ -9581,14 +9587,6 @@ body.pwa-installed #btn-header-install {
                 const loginModal = document.getElementById('login-modal');
                 const roleSelect = document.getElementById('login-role-select');
 
-                // Dọn phiên Giáo viên kiểu cũ (CODE67 lưu vĩnh viễn, không cần mật khẩu)
-                ['matrix_active_session_v1', 'matrix_teacher_session_v1'].forEach(k => {
-                    try {
-                        const o = JSON.parse(localStorage.getItem(k) || 'null');
-                        if (o && o.role === 'GV') localStorage.removeItem(k);
-                    } catch (e) {}
-                });
-
                 if (forceStudentRole) {
                     let hsSess = null; try { hsSess = JSON.parse(localStorage.getItem('matrix_active_session_v1') || 'null'); } catch (e) {}
                     if (hsSess && hsSess.role === 'HS' && hsSess.username && hsSess.fullName && hsSess.className) {
@@ -9601,7 +9599,8 @@ body.pwa-installed #btn-header-install {
                             role: 'HS',
                             fullName: profiles.HS.fullName,
                             className: profiles.HS.className,
-                            username: hsSess.username
+                            username: hsSess.username,
+                            savedAt: Date.now()
                         }));
                         if (loginModal) loginModal.classList.add('opacity-0', 'hidden');
                         return true;
@@ -9611,11 +9610,23 @@ body.pwa-installed #btn-header-install {
                     return false;
                 }
 
-                // Giáo viên: chỉ vào lại không cần gõ mật khẩu khi vừa tải lại trang TRONG CÙNG TAB (đã mở khóa)
-                const gv = TeacherAuth.getSession();
-                if (gv && TeacherAuth.mode() === 'login') {
+                // 1. KIỂM TRA PHIÊN GIÁO VIÊN ĐÃ LƯU VĨNH VIỄN TRÊN THIẾT BỊ NÀY
+                const gvSession = TeacherAuth.getSession();
+                let gvActive = null;
+                try {
+                    const act = JSON.parse(localStorage.getItem('matrix_active_session_v1') || 'null');
+                    if (act && act.role === 'GV') gvActive = act;
+                } catch (e) {}
+                if (!gvActive) {
+                    try {
+                        const tch = JSON.parse(localStorage.getItem('matrix_teacher_session_v1') || 'null');
+                        if (tch && tch.role === 'GV') gvActive = tch;
+                    } catch (e) {}
+                }
+
+                if (gvSession || gvActive) {
                     const a = TeacherAuth.get();
-                    const name = (gv.fullName || (a && a.fullName) || '').trim();
+                    const name = ((gvSession && gvSession.fullName) || (gvActive && gvActive.fullName) || (a && a.fullName) || (profiles.GV && profiles.GV.fullName) || 'NGUYỄN LƯƠNG THỌ').trim();
                     if (name) {
                         if (roleSelect) roleSelect.value = 'GV';
                         saveUserProfileInfo('GV', name, '');
@@ -9629,18 +9640,32 @@ body.pwa-installed #btn-header-install {
                     }
                 }
 
+                // 2. KIỂM TRA PHIÊN HỌC SINH ĐÃ LƯU TRÊN THIẾT BỊ NÀY
                 const rawActive = localStorage.getItem('matrix_active_session_v1');
-                if (!rawActive) return false;
-                const session = JSON.parse(rawActive);
-                if (session && session.role === 'HS' && session.fullName && session.className && session.username) {
-                    if (roleSelect) roleSelect.value = 'HS';
-                    saveUserProfileInfo('HS', session.fullName, session.className);
-                    handleLoginRoleChange();
-                    syncUserInfoToHome(session.fullName, session.className, 'HS');
-                    applyRolePermissionsUI('HS');
-                    if (loginModal) loginModal.classList.add('opacity-0', 'hidden');
-                    return true;
+                if (rawActive) {
+                    const session = JSON.parse(rawActive);
+                    if (session && session.role === 'HS' && session.fullName && session.className && session.username) {
+                        if (roleSelect) roleSelect.value = 'HS';
+                        saveUserProfileInfo('HS', session.fullName, session.className);
+                        handleLoginRoleChange();
+                        syncUserInfoToHome(session.fullName, session.className, 'HS');
+                        applyRolePermissionsUI('HS');
+                        if (loginModal) loginModal.classList.add('opacity-0', 'hidden');
+                        return true;
+                    }
                 }
+            } catch (e) {
+                console.warn('checkSavedLoginSession error:', e);
+            }
+
+            // Nếu thiết bị này chưa từng đăng nhập -> hiện cửa sổ Đăng nhập
+            try {
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.classList.remove('hidden');
+                    setTimeout(() => loginModal.classList.remove('opacity-0'), 20);
+                }
+                handleLoginRoleChange();
             } catch (e) {}
             return false;
         }
@@ -9726,17 +9751,34 @@ body.pwa-installed #btn-header-install {
 
             saveUserProfileInfo(role, fullName, className);
 
+            const remCheck = document.getElementById('login-remember-check');
+            const shouldRemember = remCheck ? remCheck.checked : true;
+
             if (role === 'GV') {
                 updateDesignerBadge(fullName);
                 try { CODE164Designer.claim(fullName); } catch (e) {}   /* [CODE164] */
                 TeacherAuth.setSession(fullName);
+                if (shouldRemember) {
+                    try {
+                        const gvData = JSON.stringify({
+                            role: 'GV',
+                            fullName: fullName,
+                            className: '',
+                            unlocked: true,
+                            savedAt: Date.now()
+                        });
+                        localStorage.setItem('matrix_active_session_v1', gvData);
+                        localStorage.setItem('matrix_teacher_session_v1', gvData);
+                    } catch (e) {}
+                }
             } else {
                 try {
                     localStorage.setItem('matrix_active_session_v1', JSON.stringify({
                         role: 'HS',
                         fullName: fullName,
                         className: className,
-                        username: username || ''
+                        username: username || '',
+                        savedAt: Date.now()
                     }));
                 } catch (e) {}
             }
