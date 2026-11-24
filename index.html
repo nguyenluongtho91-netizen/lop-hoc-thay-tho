@@ -326,28 +326,50 @@
         .katex * { font-family: inherit; }
         /* [CODE31] PHẦN BÀI LÀM (câu hỏi, đáp án, hướng dẫn giải): MỘT font duy nhất là Roboto, kể cả chữ/số trong công thức.
            Ký hiệu toán Roboto không có (⇒, ∈, ∞...) tự lấy từ KaTeX_Main; ngoặc/dấu lớn, ký hiệu AMS, véc-tơ giữ phông KaTeX gốc. */
-        :is(#questions-container, .qc-live) .katex,
-        :is(#questions-container, .qc-live) .katex .mathnormal, :is(#questions-container, .qc-live) .katex .mathit, :is(#questions-container, .qc-live) .katex .mathrm,
-        :is(#questions-container, .qc-live) .katex .mathbf, :is(#questions-container, .qc-live) .katex .mathbfit, :is(#questions-container, .qc-live) .katex .mathsf,
-        :is(#questions-container, .qc-live) .katex .textrm, :is(#questions-container, .qc-live) .katex .textit, :is(#questions-container, .qc-live) .katex .textbf,
-        :is(#questions-container, .qc-live) .katex .textsf, :is(#questions-container, .qc-live) .katex .text, :is(#questions-container, .qc-live) .katex .mathdefault {
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex,
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathnormal, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathit, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathrm,
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathbf, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathbfit, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathsf,
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .textrm, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .textit, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .textbf,
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .textsf, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .text, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .mathdefault {
             font-family: 'Roboto', KaTeX_Main, 'Times New Roman', serif !important;
+            font-style: normal !important;
         }
-        :is(#questions-container, .qc-live) .katex .accent-body, :is(#questions-container, .qc-live) .katex .accent-body * { font-family: KaTeX_Main, serif !important; }
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .accent-body, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .katex .accent-body * { font-family: KaTeX_Main, serif !important; }
         /* [CODE36] Khoảng hở nghiêng của KaTeX (italic correction) vẫn còn khi ép chữ đứng -> gây hở thừa sau chữ in hoa, VD "(P )". Bỏ đi. */
         .katex .mord.mathnormal { margin-right: 0 !important; }
-        :is(#questions-container, .qc-live) .sol-panel .katex, :is(#questions-container, .qc-live) .q-title-text .katex { font-family: 'Roboto', KaTeX_Main, 'Times New Roman', serif !important; }
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .sol-panel .katex, 
+        :is(#questions-container, .qc-live, #word-import-modal, #pdf-import-modal, #bank-modal, .math-content) .q-title-text .katex { font-family: 'Roboto', KaTeX_Main, 'Times New Roman', serif !important; }
         /* Hệ nhiều dòng nằm giữa dòng chữ: chừa khoảng trống trên/dưới để không đè lên dòng kế bên */
         .math-content .katex:has(.delimsizing.mult), .math-content .katex:has(.mtable) { display: inline-block; margin: .3em 0; vertical-align: middle; }
         .math-content sub, .q-title-text sub, button sub {
-            font-size: 0.76em;
-            vertical-align: sub;
+            font-size: 0.72em;
             line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+            bottom: -0.22em;
         }
         .math-content sup, .q-title-text sup, button sup {
-            font-size: 0.76em;
-            vertical-align: super;
+            font-size: 0.72em;
             line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+            top: -0.42em;
+        }
+        .math-content .katex {
+            font-size: 1.02em !important;
+            font-weight: inherit !important;
+        }
+        .math-content b, .math-content strong {
+            font-weight: 600 !important;
         }
         .math-frac {
             display: inline-flex;
@@ -12531,7 +12553,7 @@ function findVercelStudent(query) {
                     answerAreaHtml = `<div id="${kind}-prev-opts-${qIdx}" class="grid grid-cols-2 gap-1.5">${opts.map((opt, oIdx) => {
                         const isCorrect = q.detectedByStyle && q.correctIndex === oIdx;
                         return `
-                        <button type="button" onclick="setImportCorrect('${kind}', ${qIdx}, ${oIdx})" class="text-left px-2.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all ${isCorrect ? T.on + ' shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}">
+                        <button type="button" onclick="setImportCorrect('${kind}', ${qIdx}, ${oIdx})" class="text-left px-2.5 py-1.5 rounded-lg border text-[13px] font-medium flex items-center gap-1.5 transition-all ${isCorrect ? T.on + ' shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}">
                             <span class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${isCorrect ? T.dot : 'bg-slate-200 text-slate-700'}">${optLabels[oIdx]}</span>
                             <span class="math-content break-words flex-1">${formatMathAndChemHTML(opt.text)}</span>
                         </button>`;
@@ -12540,7 +12562,7 @@ function findVercelStudent(query) {
                     answerAreaHtml = `<div id="${kind}-prev-opts-${qIdx}" class="grid grid-cols-1 gap-1.5">${opts.map((opt, j) => {
                         const v = Boolean((q.tfAnswers || [])[j]);
                         return `
-                        <div class="px-2.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-2 ${v && q.detectedByStyle ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
+                        <div class="px-2.5 py-1.5 rounded-lg border text-[13px] font-medium flex items-center gap-2 ${v && q.detectedByStyle ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
                             <span class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 bg-slate-200 text-slate-700">${'abcd'[j]}</span>
                             <span class="math-content break-words flex-1">${formatMathAndChemHTML(opt.text)}</span>
                             <button type="button" onclick="setImportTF('${kind}', ${qIdx}, ${j}, true)" class="px-2.5 py-0.5 rounded-full border text-[11px] font-black ${v ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-slate-500 border-slate-300 hover:bg-emerald-50'}">Đúng</button>
@@ -12590,7 +12612,7 @@ function findVercelStudent(query) {
                             <button type="button" title="Xóa câu này khỏi danh sách nạp" onclick="removeImportQuestion('${kind}', ${qIdx})" class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-700 border border-slate-200 text-[11px] font-black transition-colors">🗑</button>
                         </div>
                     </div>
-                    <div id="${kind}-prev-stem-${qIdx}" class="math-content text-xs font-extrabold text-slate-900 mb-2 leading-snug">${formatMathAndChemHTML(q.text, { center: true })}</div>
+                    <div id="${kind}-prev-stem-${qIdx}" class="math-content text-[14px] font-normal text-slate-800 mb-2 leading-relaxed">${formatMathAndChemHTML(q.text, { center: true })}</div>
                     ${answerAreaHtml}
                     ${editAreaHtml}`;
                 listEl.appendChild(card);
