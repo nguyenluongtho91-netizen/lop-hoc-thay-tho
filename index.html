@@ -7257,7 +7257,9 @@ function findVercelStudent(query) {
             const letters = flat.filter(t => /^[A-DĐ]$/.test(t)).length;
             const ints = flat.filter(t => /^\d{1,3}$/.test(t)).length;
             const tfs = flat.filter(t => /^(?:Đ|S|Đúng|Sai)$/i.test(t)).length;
-            if ((letters >= 3 && ints >= 3) || tfs >= 3) return true; // bảng đáp án
+            const hasCauCol = flat.some(t => /^câu$/i.test(t));
+            const hasDaCol = flat.some(t => /^đáp\s*án$/i.test(t));
+            if ((letters >= 3 && ints >= 3) || tfs >= 3 || (hasCauCol && hasDaCol)) return true; // bảng đáp án (Phần I, II, III)
             return false;
         }
 
@@ -12624,6 +12626,399 @@ function findVercelStudent(query) {
         // ============================================================
         let currentAnswerKeyTarget = 'word';
 
+        
+        // ============================================================
+        // BỘ NHẬN DIỆN BẢNG ĐÁP ÁN TOÀN DIỆN (PHẦN I, II, III) GDPT 2018
+        // ============================================================
+        function parseComprehensiveAnswerKey(source) {
+            const res = {
+                mc: {},  // qNum -> 0..3 (A..D)
+                tf: {},  // qNum -> [bool, bool, bool, bool] (a,b,c,d)
+                sa: {},  // qNum -> string
+                totalFound: 0
+            };
+            if (!source) return res;
+
+            function parseTfVal(v) {
+                if (typeof v === 'boolean') return v;
+                const s = String(v == null ? '' : v).trim().toUpperCase();
+                if (['Đ', 'D', 'ĐÚNG', 'DUNG', 'TRUE', 'T', '1'].includes(s)) return true;
+                if (['S', 'SAI', 'FALSE', 'F', '0'].includes(s)) return false;
+                return null;
+            }
+
+            function cleanCell(t) {
+                if (!t) return '';
+                return String(t).replace(/<[^>]*>/g, '').replace(/@@(?:IMG|TBL)_[A-Za-z0-9+/=_-]+(?:~\d+x\d+)?@@/g, '').trim();
+            }
+
+            // 1. Phân tích trực tiếp từ các bảng Word (.docx) line.tableData nếu có
+            if (Array.isArray(source)) {
+                for (const line of source) {
+                    if (line && line.isTable && line.tableData && Array.isArray(line.tableData.rows)) {
+                        parseFromTableDataObj(line.tableData);
+                    }
+                }
+            }
+
+            function parseFromTableDataObj(tableData) {
+                const rows = tableData.rows || [];
+                if (!rows.length) return;
+                const grid = rows.map(r => r.map(c => ({
+                    t: cleanCell(c.t || ''),
+                    rs: c.rs || 1,
+                    cs: c.cs || 1
+                })));
+
+                const allTexts = [];
+                grid.forEach(r => r.forEach(c => { if (c.t) allTexts.push(c.t); }));
+                if (!allTexts.length) return;
+
+                const hasLenhHoi = allTexts.some(t => /^(?:lệnh\s*hỏi|ý|mệnh\s*đề)$/i.test(t));
+                const hasTfHeader = allTexts.some(t => /đ\/s|đúng\/sai/i.test(t));
+                const tfValCount = allTexts.filter(t => parseTfVal(t) !== null && t.length <= 4).length;
+                // Chữ hoa A, B, C, D (case sensitive)
+                const mcValCount = allTexts.filter(t => /^[A-D]$/.test(t)).length;
+
+                let tableType = null;
+                // ƯU TIÊN 1: TF phải xét trước vì cột lệnh hỏi có 'a','b','c','d'
+                if (hasLenhHoi || hasTfHeader || (tfValCount >= 4 && grid[0].length >= 5)) {
+                    tableType = 'tf';
+                } else if (mcValCount >= 3) {
+                    tableType = 'mc';
+                } else {
+                    const hasCauCol = allTexts.some(t => /^câu$/i.test(t));
+                    const hasDaCol = allTexts.some(t => /^đáp\s*án$/i.test(t));
+                    if (hasCauCol && hasDaCol && mcValCount === 0) tableType = 'sa';
+                }
+
+                if (tableType === 'mc') {
+                    grid.forEach(r => {
+                        const texts = r.map(c => c.t).filter(Boolean);
+                        if (texts.some(t => /^(?:câu|đáp\s*án)$/i.test(t))) return;
+                        if (texts.length >= 4) {
+                            const m1q = texts[0].match(/(\d+)/), m1a = texts[1].match(/([A-D])/i);
+                            if (m1q && m1a) res.mc[parseInt(m1q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m1a[1].toUpperCase());
+                            const m2q = texts[2].match(/(\d+)/), m2a = texts[3].match(/([A-D])/i);
+                            if (m2q && m2a) res.mc[parseInt(m2q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m2a[1].toUpperCase());
+                        } else if (texts.length >= 2) {
+                            const mq = texts[0].match(/(\d+)/), ma = texts[1].match(/([A-D])/i);
+                            if (mq && ma) res.mc[parseInt(mq[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(ma[1].toUpperCase());
+                        }
+                    });
+                } else if (tableType === 'tf') {
+                    let curLeft = null, curRight = null;
+                    const tfDict = {};
+                    grid.forEach(r => {
+                        const texts = r.map(c => c.t);
+                        if (texts.some(t => /^(?:câu|lệnh\s*hỏi|đáp\s*án.*)$/i.test(t))) return;
+                        if (r.length >= 6) {
+                            const mql = r[0].t.match(/(\d+)/); if (mql) curLeft = parseInt(mql[1], 10);
+                            const moptl = r[1].t.match(/([a-d])/i); const vall = parseTfVal(r[2].t);
+                            if (curLeft && moptl && vall !== null) {
+                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                tfDict[curLeft][moptl[1].toLowerCase()] = vall;
+                            }
+                            const mqr = r[3].t.match(/(\d+)/); if (mqr) curRight = parseInt(mqr[1], 10);
+                            const moptr = r[4].t.match(/([a-d])/i); const valr = parseTfVal(r[5].t);
+                            if (curRight && moptr && valr !== null) {
+                                if (!tfDict[curRight]) tfDict[curRight] = {};
+                                tfDict[curRight][moptr[1].toLowerCase()] = valr;
+                            }
+                        } else if (r.length === 4) {
+                            const moptl = r[0].t.match(/([a-d])/i); const vall = parseTfVal(r[1].t);
+                            if (curLeft && moptl && vall !== null) {
+                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                tfDict[curLeft][moptl[1].toLowerCase()] = vall;
+                            }
+                            const moptr = r[2].t.match(/([a-d])/i); const valr = parseTfVal(r[3].t);
+                            if (curRight && moptr && valr !== null) {
+                                if (!tfDict[curRight]) tfDict[curRight] = {};
+                                tfDict[curRight][moptr[1].toLowerCase()] = valr;
+                            }
+                        } else if (r.length >= 2) {
+                            if (r.length >= 3) {
+                                const mq = r[0].t.match(/(\d+)/); if (mq) curLeft = parseInt(mq[1], 10);
+                                const mopt = r[1].t.match(/([a-d])/i); const val = parseTfVal(r[2].t);
+                                if (curLeft && mopt && val !== null) {
+                                    if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                    tfDict[curLeft][mopt[1].toLowerCase()] = val;
+                                }
+                            } else {
+                                const mopt = r[0].t.match(/([a-d])/i); const val = parseTfVal(r[1].t);
+                                if (curLeft && mopt && val !== null) {
+                                    if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                    tfDict[curLeft][mopt[1].toLowerCase()] = val;
+                                }
+                            }
+                        }
+                    });
+                    for (const qNum in tfDict) {
+                        res.tf[parseInt(qNum, 10)] = [
+                            Boolean(tfDict[qNum].a),
+                            Boolean(tfDict[qNum].b),
+                            Boolean(tfDict[qNum].c),
+                            Boolean(tfDict[qNum].d)
+                        ];
+                    }
+                } else if (tableType === 'sa') {
+                    grid.forEach(r => {
+                        const texts = r.map(c => c.t).filter(Boolean);
+                        if (texts.some(t => /^(?:câu|đáp\s*án)$/i.test(t))) return;
+                        if (texts.length >= 4) {
+                            const m1q = texts[0].match(/(\d+)/);
+                            if (m1q && texts[1]) res.sa[parseInt(m1q[1], 10)] = cleanCell(texts[1]);
+                            const m2q = texts[2].match(/(\d+)/);
+                            if (m2q && texts[3]) res.sa[parseInt(m2q[1], 10)] = cleanCell(texts[3]);
+                        } else if (texts.length >= 2) {
+                            const mq = texts[0].match(/(\d+)/);
+                            if (mq && texts[1]) res.sa[parseInt(mq[1], 10)] = cleanCell(texts[1]);
+                        }
+                    });
+                }
+            }
+
+            // 2. Phân tích từ chuỗi text thuần / bảng trải phẳng
+            let rawText = '';
+            if (Array.isArray(source)) {
+                rawText = source.map(l => {
+                    if (!l) return '';
+                    if (l.isTable && l.tableFlat) return l.tableFlat.map(fl => richToPlain(fl)).join('\t');
+                    return richToPlain(l);
+                }).join('\n');
+            } else {
+                rawText = String(source || '');
+            }
+
+            const rawLines = rawText.split('\n');
+            const secPartRe = /^(?:[\•\-\s]*)(?:phần|phan|part)\s*(i{1,3}|iv|v|1|2|3)\b/i;
+            const sections = [];
+            rawLines.forEach((line, i) => {
+                const m = line.trim().match(secPartRe);
+                if (m) {
+                    const v = m[1].toLowerCase();
+                    const stype = (v === 'i' || v === '1') ? 'mc' : ((v === 'ii' || v === '2') ? 'tf' : 'sa');
+                    sections.push({ type: stype, start: i });
+                }
+            });
+
+            const chunks = {};
+            if (sections.length > 0) {
+                sections.forEach((sec, idx) => {
+                    const nextStart = idx + 1 < sections.length ? sections[idx + 1].start : rawLines.length;
+                    chunks[sec.type] = rawLines.slice(sec.start, nextStart);
+                });
+            } else {
+                chunks.all = rawLines;
+            }
+
+            function parseMcLines(lines) {
+                lines.forEach(line => {
+                    if (/^\s*phần\s*(?:i|1)\s*[:\.]?\s*(?:mỗi\s*câu|trắc\s*nghiệm)?.*$/i.test(line) && !/\b\d+\s*[\.\:\-\)]?\s*[A-D]\b/i.test(line)) return;
+                    let cells = line.split('\t').map(c => c.trim());
+                    if (cells.length < 2) cells = line.split(/\s{2,}|\|/).map(c => c.trim()).filter(Boolean);
+                    if (cells.some(c => /^(?:câu|đáp\s*án|dap\s*an)$/i.test(c))) return;
+
+                    if (cells.length >= 4) {
+                        const m1q = cells[0].match(/(\d+)/), m1a = cells[1].match(/([A-D])/i);
+                        if (m1q && m1a) res.mc[parseInt(m1q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m1a[1].toUpperCase());
+                        const m2q = cells[2].match(/(\d+)/), m2a = cells[3].match(/([A-D])/i);
+                        if (m2q && m2a) res.mc[parseInt(m2q[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(m2a[1].toUpperCase());
+                    } else if (cells.length >= 2) {
+                        const mq = cells[0].match(/(\d+)/), ma = cells[1].match(/([A-D])/i);
+                        if (mq && ma) res.mc[parseInt(mq[1], 10)] = ['A', 'B', 'C', 'D'].indexOf(ma[1].toUpperCase());
+                    }
+                });
+
+                const combined = lines.join('\n');
+                const inlineMatches = [...combined.matchAll(/(?:câu\s*)?(\d{1,3})\s*[\.\:\-\)\/]?\s*([A-D])\b/gi)];
+                inlineMatches.forEach(m => {
+                    const qNum = parseInt(m[1], 10);
+                    const aIdx = ['A', 'B', 'C', 'D'].indexOf(m[2].toUpperCase());
+                    if (!isNaN(qNum) && aIdx !== -1 && res.mc[qNum] === undefined) {
+                        res.mc[qNum] = aIdx;
+                    }
+                });
+            }
+
+            function parseTfLines(lines) {
+                let curLeft = null, curRight = null;
+                const tfDict = {};
+
+                lines.forEach(line => {
+                    if (/phần\s*(?:ii|2)|điểm\s*tối\s*đa|thí\s*sinh/i.test(line)) return;
+                    let cells = line.split('\t').map(c => c.trim());
+                    if (cells.length < 3) {
+                        cells = line.split(/\|/).map(c => c.trim());
+                        if (cells.length >= 2 && cells[0] === '') cells.pop(0);
+                        if (cells.length >= 1 && cells[cells.length - 1] === '') cells.pop();
+                    }
+                    if (cells.some(c => /^(?:câu|lệnh\s*hỏi|đáp\s*án.*)$/i.test(c))) return;
+
+                    if (cells.length >= 6) {
+                        const mql = cells[0].match(/(\d+)/); if (mql) curLeft = parseInt(mql[1], 10);
+                        const moptl = cells[1].match(/([a-d])/i); const vall = parseTfVal(cells[2]);
+                        if (curLeft && moptl && vall !== null) {
+                            if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                            tfDict[curLeft][moptl[1].toLowerCase()] = vall;
+                        }
+                        const mqr = cells[3].match(/(\d+)/); if (mqr) curRight = parseInt(mqr[1], 10);
+                        const moptr = cells[4].match(/([a-d])/i); const valr = parseTfVal(cells[5]);
+                        if (curRight && moptr && valr !== null) {
+                            if (!tfDict[curRight]) tfDict[curRight] = {};
+                            tfDict[curRight][moptr[1].toLowerCase()] = valr;
+                        }
+                    } else if (cells.length >= 2) {
+                        if (cells.length >= 3) {
+                            const mq = cells[0].match(/(\d+)/); if (mq) curLeft = parseInt(mq[1], 10);
+                            const mopt = cells[1].match(/([a-d])/i); const val = parseTfVal(cells[2]);
+                            if (curLeft && mopt && val !== null) {
+                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                tfDict[curLeft][mopt[1].toLowerCase()] = val;
+                            }
+                        } else {
+                            const mopt = cells[0].match(/([a-d])/i); const val = parseTfVal(cells[1]);
+                            if (curLeft && mopt && val !== null) {
+                                if (!tfDict[curLeft]) tfDict[curLeft] = {};
+                                tfDict[curLeft][mopt[1].toLowerCase()] = val;
+                            }
+                        }
+                    }
+                });
+
+                lines.forEach(line => {
+                    const mq = line.match(/(?:câu\s*)?(\d+)[\s\.\:\-]/i);
+                    if (mq) {
+                        const qNum = parseInt(mq[1], 10);
+                        const subOpts = [...line.matchAll(/([a-d])\s*[\-\:\)\.]\s*([ĐDSFT]|đúng|sai|true|false)\b/gi)];
+                        if (subOpts.length >= 2) {
+                            if (!tfDict[qNum]) tfDict[qNum] = {};
+                            subOpts.forEach(so => {
+                                const v = parseTfVal(so[2]);
+                                if (v !== null) tfDict[qNum][so[1].toLowerCase()] = v;
+                            });
+                        } else {
+                            const tailSlice = line.slice(mq.index + mq[0].length);
+                            const rawTfs = [...tailSlice.matchAll(/\b([ĐDSFT])\b/gi)];
+                            if (rawTfs.length === 4) {
+                                if (!tfDict[qNum]) tfDict[qNum] = {};
+                                ['a', 'b', 'c', 'd'].forEach((letter, idx) => {
+                                    tfDict[qNum][letter] = parseTfVal(rawTfs[idx][1]);
+                                });
+                            }
+                        }
+                    }
+                });
+
+                for (const qNum in tfDict) {
+                    res.tf[parseInt(qNum, 10)] = [
+                        Boolean(tfDict[qNum].a),
+                        Boolean(tfDict[qNum].b),
+                        Boolean(tfDict[qNum].c),
+                        Boolean(tfDict[qNum].d)
+                    ];
+                }
+            }
+
+            function parseSaLines(lines) {
+                lines.forEach(line => {
+                    if (/phần\s*(?:iii|3)|mỗi\s*câu|điểm\b/i.test(line)) return;
+                    let cells = line.split('\t').map(c => c.trim());
+                    if (cells.length < 2) cells = line.split(/\s{2,}|\|/).map(c => c.trim()).filter(Boolean);
+                    if (cells.some(c => /^(?:câu|đáp\s*án|dap\s*an)$/i.test(c))) return;
+
+                    if (cells.length >= 4) {
+                        const m1q = cells[0].match(/(\d+)/);
+                        if (m1q && cells[1]) res.sa[parseInt(m1q[1], 10)] = cleanCell(cells[1]);
+                        const m2q = cells[2].match(/(\d+)/);
+                        if (m2q && cells[3]) res.sa[parseInt(m2q[1], 10)] = cleanCell(cells[3]);
+                    } else if (cells.length >= 2) {
+                        const mq = cells[0].match(/(\d+)/);
+                        if (mq && cells[1]) res.sa[parseInt(mq[1], 10)] = cleanCell(cells[1]);
+                    }
+                });
+
+                lines.forEach(line => {
+                    const m = line.match(/^\s*(?:câu\s*)?(\d+)\s*(?:[\.\:\=]|\s*[\-]\s+|\t)\s*(-?[\d\.,/]+)/i);
+                    if (m) {
+                        const qNum = parseInt(m[1], 10);
+                        const val = m[2].trim();
+                        if (val && res.sa[qNum] === undefined) res.sa[qNum] = val;
+                    }
+                });
+            }
+
+            if (chunks.mc) parseMcLines(chunks.mc);
+            if (chunks.tf) parseTfLines(chunks.tf);
+            if (chunks.sa) parseSaLines(chunks.sa);
+            if (chunks.all) {
+                parseMcLines(chunks.all);
+                parseTfLines(chunks.all);
+                parseSaLines(chunks.all);
+            }
+
+            res.totalFound = Object.keys(res.mc).length + Object.keys(res.tf).length + Object.keys(res.sa).length;
+            return res;
+        }
+
+        function applyComprehensiveAnswerKey(keyData, targetDraft) {
+            if (!keyData || !targetDraft || !targetDraft.length) return 0;
+            let appliedCount = 0;
+
+            const mcList = targetDraft.filter(q => qType(q) === 'mc');
+            const tfList = targetDraft.filter(q => qType(q) === 'tf');
+            const saList = targetDraft.filter(q => qType(q) === 'sa');
+
+            // 1. Phần I: Trắc nghiệm ABCD
+            if (keyData.mc && Object.keys(keyData.mc).length > 0) {
+                mcList.forEach((q, idx) => {
+                    const qNum = (q.num != null) ? q.num : (idx + 1);
+                    let optIdx = keyData.mc[qNum];
+                    if (optIdx === undefined) optIdx = keyData.mc[idx + 1];
+                    if (optIdx !== undefined && optIdx >= 0 && optIdx <= 3) {
+                        q.correctIndex = optIdx;
+                        q.detectedByStyle = true;
+                        q.weakStyle = false;
+                        appliedCount++;
+                    }
+                });
+            }
+
+            // 2. Phần II: Đúng/Sai
+            if (keyData.tf && Object.keys(keyData.tf).length > 0) {
+                tfList.forEach((q, idx) => {
+                    const qNum = (q.num != null) ? q.num : (idx + 1);
+                    let tfArr = keyData.tf[qNum];
+                    if (!tfArr) tfArr = keyData.tf[idx + 1];
+                    if (tfArr && Array.isArray(tfArr)) {
+                        q.tfAnswers = [Boolean(tfArr[0]), Boolean(tfArr[1]), Boolean(tfArr[2]), Boolean(tfArr[3])];
+                        q.tf = q.tfAnswers.slice();
+                        q.detectedByStyle = true;
+                        q.weakStyle = false;
+                        appliedCount++;
+                    }
+                });
+            }
+
+            // 3. Phần III: Trả lời ngắn
+            if (keyData.sa && Object.keys(keyData.sa).length > 0) {
+                saList.forEach((q, idx) => {
+                    const qNum = (q.num != null) ? q.num : (idx + 1);
+                    let saVal = keyData.sa[qNum];
+                    if (saVal === undefined) saVal = keyData.sa[idx + 1];
+                    if (saVal !== undefined && saVal !== null && String(saVal).trim() !== '') {
+                        q.shortAnswer = String(saVal).trim();
+                        q.answer = q.shortAnswer;
+                        q.detectedByStyle = true;
+                        q.weakStyle = false;
+                        appliedCount++;
+                    }
+                });
+            }
+
+            return appliedCount;
+        }
+
         function openAnswerKeyModal(target = 'word') {
             currentAnswerKeyTarget = target;
             const modal = document.getElementById('answer-key-modal');
@@ -16260,8 +16655,29 @@ function findVercelStudent(query) {
             return list;
         }
         function parseExamRichLines(richLines) {
+            // [MỚI] Trích xuất bảng đáp án toàn diện từ richLines GỐC (khi các bảng line.isTable còn nguyên vẹn)
+            let preKeys = null;
+            try {
+                if (typeof parseComprehensiveAnswerKey === 'function') {
+                    preKeys = parseComprehensiveAnswerKey(richLines);
+                }
+            } catch (eKey) { console.error('Lỗi nhận diện bảng đáp án sớm:', eKey); }
+
             const out = parseExamRichLines__core(levelPrepassLines(richLines));
             try { levelPostpass(out); } catch (e) { console.error('[CODE138] level', e); }
+
+            // Áp dụng đáp án vào out nếu tìm thấy
+            if (preKeys && preKeys.totalFound > 0 && typeof applyComprehensiveAnswerKey === 'function') {
+                const applied = applyComprehensiveAnswerKey(preKeys, out);
+                if (applied > 0) {
+                    const mcFound = Object.keys(preKeys.mc).length;
+                    const tfFound = Object.keys(preKeys.tf).length;
+                    const saFound = Object.keys(preKeys.sa).length;
+                    if (!out.report) out.report = { warnings: [], skipped: [] };
+                    out.report.warnings.unshift(`✨ Đã tự động nhận diện bảng đáp án (${applied} câu): Phần I (${mcFound} câu) • Phần II (${tfFound} câu) • Phần III (${saFound} câu).`);
+                }
+            }
+
             return out;
         }
 
