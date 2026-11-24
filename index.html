@@ -18276,6 +18276,24 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
 
             const topicVisible = t => {
                 if (isStudentMode && !Boolean(t.isPublished)) return false;
+                if (isStudentMode) {
+                    try {
+                        var pm = (window.CODE129Bank && typeof CODE129Bank.getPerms === 'function') ? CODE129Bank.getPerms() : null;
+                        if (pm) {
+                            if (t.subject && pm.allowedSubjects.indexOf(t.subject) === -1) return false;
+                            if (pm.gradeMode === 'my_grade_only') {
+                                var sg = (window.CODE129Bank && typeof CODE129Bank.getStudentGrade === 'function') ? CODE129Bank.getStudentGrade() : 0;
+                                if (sg > 0) {
+                                    var tg = String(t.grade || '').match(/\d+/);
+                                    if (tg && parseInt(tg[0], 10) !== sg) return false;
+                                }
+                            } else if (pm.gradeMode === 'custom_grades') {
+                                var tg2 = String(t.grade || '').match(/\d+/);
+                                if (tg2 && pm.customGrades.indexOf(parseInt(tg2[0], 10)) === -1) return false;
+                            }
+                        }
+                    } catch (e) {}
+                }
                 return filterGrade === 'ALL' || t.grade === filterGrade;
             };
 
@@ -23567,9 +23585,104 @@ function enHeader(doc, cfg, ver, withAns, total) {
         'Hóa học|8': '#Chương 1: Phản ứng hóa học|Bài 1: Sử dụng hóa chất, thiết bị cơ bản trong phòng thí nghiệm|Bài 2: Phản ứng hóa học|Bài 3: Định luật bảo toàn khối lượng và phương trình hóa học|Bài 4: Mol và tỉ khối của chất khí|Bài 5: Dung dịch và nồng độ dung dịch|Bài 6: Tính theo phương trình hóa học|Bài 7: Tốc độ phản ứng và chất xúc tác|#Chương 2: Một số hợp chất thông dụng|Bài 8: Acid|Bài 9: Base - Thang pH|Bài 10: Oxide|Bài 11: Muối|Bài 12: Phân bón hóa học',
         'Hóa học|9': '#Chương 1: Kim loại|Bài 1: Tính chất của kim loại - Dãy hoạt động hóa học|Bài 2: Tách kim loại và việc sử dụng hợp kim|Bài 3: Sự ăn mòn kim loại và bảo vệ kim loại|#Chương 2: Hợp chất hữu cơ - Hydrocarbon|Bài 4: Giới thiệu về hợp chất hữu cơ|Bài 5: Alkane|Bài 6: Alkene|Bài 7: Nguồn nhiên liệu (Dầu mỏ, khí thiên nhiên)|#Chương 3: Dẫn xuất hydrocarbon - Polymer|Bài 8: Ethylic alcohol|Bài 9: Acetic acid|Bài 10: Lipid - Chất béo|Bài 11: Carbohydrate - Glucose và Saccharose|Bài 12: Tinh bột và Cellulose|Bài 13: Protein|Bài 14: Polymer'
     };
-    var st = { order: [], lessons: {}, q: {}, m: {} }, path = [], modal, body, keepPath = false;
-    function loadSt() { st = { order: [], lessons: {}, q: {}, m: {} }; try { var s = JSON.parse(localStorage.getItem(lsk()) || '{}'); st.order = s.order || []; st.lessons = s.lessons || {}; st.q = s.q || {}; st.m = s.m || {}; } catch (e) {} }
+    var st = { order: [], lessons: {}, q: {}, m: {}, perms: null }, path = [], modal, body, keepPath = false;
+    function loadSt() {
+        st = { order: [], lessons: {}, q: {}, m: {}, perms: null };
+        try {
+            var s = JSON.parse(localStorage.getItem(lsk()) || '{}');
+            st.order = s.order || [];
+            st.lessons = s.lessons || {};
+            st.q = s.q || {};
+            st.m = s.m || {};
+            st.perms = s.perms || null;
+        } catch (e) {}
+    }
     loadSt();
+
+    /* =========================================================================
+       HỆ THỐNG PHÂN QUYỀN HỌC SINH (TEACHER PERMISSION ENGINE)
+       Quy tắc:
+       1. Môn học: Mặc định học sinh CHỈ XEM ĐƯỢC môn Hóa học của Thầy Thọ.
+          Chỉ khi Giáo viên tích cấp quyền mở thêm môn khác (Toán, Lí...) thì HS mới xem được.
+       2. Khối lớp: Mặc định học sinh khối nào CHỈ XEM ĐƯỢC khối đó (HS lớp 10 chỉ thấy khối 10,
+          HS lớp 12 chỉ thấy khối 12).
+          Giáo viên có quyền bật "Cho phép xem tất cả các khối" để ôn thi tốt nghiệp THPT.
+       ========================================================================= */
+    function defaultPerms() {
+        return {
+            allowedSubjects: ['Hóa học'],
+            gradeMode: 'my_grade_only',
+            customGrades: [10, 11, 12]
+        };
+    }
+
+    function getPerms() {
+        var p = st.perms;
+        if (!p || typeof p !== 'object') {
+            try {
+                var raw = localStorage.getItem('matrix_bank_student_perms_v1');
+                if (raw) p = JSON.parse(raw);
+            } catch (e) {}
+        }
+        var def = defaultPerms();
+        if (!p) return def;
+        return {
+            allowedSubjects: (Array.isArray(p.allowedSubjects) && p.allowedSubjects.length) ? p.allowedSubjects : def.allowedSubjects,
+            gradeMode: p.gradeMode || def.gradeMode,
+            customGrades: (Array.isArray(p.customGrades) && p.customGrades.length) ? p.customGrades : def.customGrades
+        };
+    }
+
+    function savePerms(newPerms) {
+        st.perms = newPerms;
+        try { localStorage.setItem('matrix_bank_student_perms_v1', JSON.stringify(newPerms)); } catch (e) {}
+        save();
+        try { BS.touch(true); } catch (e) {}
+    }
+
+    function getStudentGradeNum() {
+        var cls = '';
+        try {
+            var id = (typeof getStudentIdentity === 'function' ? getStudentIdentity() : null) || {};
+            cls = id.cls || '';
+        } catch (e) {}
+        if (!cls) {
+            try {
+                var el = document.getElementById('main-class-input');
+                if (el) cls = el.value || '';
+            } catch (e) {}
+        }
+        if (!cls) {
+            try {
+                var raw = localStorage.getItem('user_profiles_v1');
+                if (raw) {
+                    var p = JSON.parse(raw);
+                    if (p && p.HS && p.HS.className) cls = p.HS.className;
+                }
+            } catch (e) {}
+        }
+        var m = String(cls).match(/\d+/);
+        return m ? parseInt(m[0], 10) : 0;
+    }
+
+    function gradesForSubject(subj) {
+        var all = (info(subj) && info(subj)[2]) || [6, 7, 8, 9, 10, 11, 12];
+        if (!isStu()) return all;
+        var pm = getPerms();
+        if (pm.gradeMode === 'all_grades') {
+            return all;
+        } else if (pm.gradeMode === 'custom_grades') {
+            var allowed = all.filter(function (g) { return pm.customGrades.indexOf(g) >= 0; });
+            return allowed.length ? allowed : all;
+        } else {
+            // 'my_grade_only' = Mặc định: Học sinh khối nào CHỈ XEM ĐƯỢC khối đó!
+            var stuGrade = getStudentGradeNum();
+            if (stuGrade > 0 && all.indexOf(stuGrade) >= 0) {
+                return [stuGrade];
+            }
+            return all;
+        }
+    }
 try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; st.q = st.q || {}; localStorage.setItem(LSK0 + '_c137', '1'); } } catch (e) {}
     function save() { try { localStorage.setItem(lsk(), JSON.stringify(st)); } catch (e) {} if (!applying) BS.touch(false); }
     function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -23578,6 +23691,11 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
         var names = SUBJ.map(function (x) { return x[0]; });
         var o = st.order.filter(function (n) { return names.indexOf(n) >= 0; });
         names.forEach(function (n) { if (o.indexOf(n) < 0) o.push(n); });
+        if (isStu()) {
+            var pm = getPerms();
+            var filtered = o.filter(function (n) { return pm.allowedSubjects.indexOf(n) >= 0; });
+            return filtered.length ? filtered : ['Hóa học'];
+        }
         return o;
     }
     function info(n) { return SUBJ.filter(function (x) { return x[0] === n; })[0]; }
@@ -23918,13 +24036,21 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
         var top = keep ? body.scrollTop : 0, h = BS.barHtml() + crumb(), stu = isStu();
         if (!path.length) {
             var l = subjects();
-            if (!stu) h += '<div class="bk-tools"><b>Chọn môn học</b><span><button class="bk-b" data-bkexp="1" title="Tải file sao lưu toàn bộ ngân hàng đề về máy">💾 Sao lưu ngân hàng đề</button><button class="bk-b" data-bkimp="1" title="Khôi phục từ file sao lưu">📥 Khôi phục</button></span></div>';
+            if (!stu) h += '<div class="bk-tools"><b>Chọn môn học</b><span><button class="bk-b" data-bkperm="1" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;border:1px solid #c7d2fe;box-shadow:0 2px 6px rgba(79,70,229,0.25);" title="Thiết lập môn học và khối lớp học sinh được xem">🛡️ CẤP QUYỀN HỌC SINH</button><button class="bk-b" data-bkexp="1" title="Tải file sao lưu toàn bộ ngân hàng đề về máy">💾 Sao lưu</button><button class="bk-b" data-bkimp="1" title="Khôi phục từ file sao lưu">📥 Khôi phục</button></span></div>';
             h += '<div class="bk-grid">' + l.map(function (n, i) {
                 return '<div class="bk-card" data-sj="' + esc(n) + '"><div class="bk-ic">' + info(n)[1] + '</div><div class="bk-nm">' + esc(n) + '</div><div class="bk-sub">' + info(n)[2].length + ' khối lớp</div>' +
                     (stu ? '' : '<div class="bk-mvw"><button type="button" class="bk-mv" data-mvs="' + esc(n) + '" data-d="-1" title="Chuyển môn học lên trước"' + (i === 0 ? ' disabled' : '') + '>◀</button><button type="button" class="bk-mv" data-mvs="' + esc(n) + '" data-d="1" title="Chuyển môn học ra sau"' + (i === l.length - 1 ? ' disabled' : '') + '>▶</button></div>') + '</div>';   /* [CODE158] hiện lại nút di chuyển môn học (máy tính) */
             }).join('') + '</div>';
         } else if (path.length === 1) {
-            h += '<div class="bk-grid">' + info(path[0])[2].map(function (g) {
+            var grList = gradesForSubject(path[0]);
+            if (stu) {
+                var sg = getStudentGradeNum(), pm = getPerms();
+                if (pm.gradeMode === 'my_grade_only' && sg > 0) {
+                    h += '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:8px 12px;margin-bottom:12px;color:#1e40af;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;">' +
+                         '<span>🎯</span> Lớp của em: <b>Khối ' + sg + '</b> (Hệ thống tự động hiển thị bài học đúng khối lớp theo phân quyền Giáo viên)</div>';
+                }
+            }
+            h += '<div class="bk-grid">' + grList.map(function (g) {
                 var c = lessons(path[0], g).filter(function (x) { return !x.h; }).length;
                 return '<div class="bk-card" data-gr="' + g + '"><div class="bk-ic">📁</div><div class="bk-nm">' + esc(path[0]) + ' ' + g + '</div><div class="bk-sub">' + (c ? c + ' bài học' : 'Chưa có danh sách bài') + '</div></div>';
             }).join('') + '</div>';
@@ -24137,11 +24263,136 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
     function onClick(e) {
         try { onClick0(e); } catch (er) { console.error(er); try { if (window.prNotice) window.prNotice('Có lỗi xảy ra', String(er && er.message || er)); } catch (e2) {} }
     }
+    function openPermModal() {
+        var m = document.getElementById('bk-perm-modal');
+        if (!m) {
+            m = document.createElement('div');
+            m.id = 'bk-perm-modal';
+            m.className = 'no-print';
+            m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);';
+            document.body.appendChild(m);
+        }
+        var pm = getPerms();
+        var allSubjs = SUBJ.map(function (x) { return x[0]; });
+        
+        var subjCheckboxes = allSubjs.map(function (s) {
+            var checked = pm.allowedSubjects.indexOf(s) >= 0;
+            var ic = info(s) ? info(s)[1] : '📚';
+            return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid ' + (checked ? '#6366f1' : '#cbd5e1') + ';background:' + (checked ? '#eef2ff' : '#fff') + ';border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:700;color:#1e293b;user-select:none;transition:all .15s;">' +
+                   '<input type="checkbox" class="perm-sj-chk" value="' + esc(s) + '"' + (checked ? ' checked' : '') + ' style="width:17px;height:17px;accent-color:#4f46e5;">' +
+                   '<span>' + ic + ' ' + esc(s) + '</span>' +
+                   '</label>';
+        }).join('');
+        
+        var gradesList = [6, 7, 8, 9, 10, 11, 12].map(function (g) {
+            var checked = pm.customGrades.indexOf(g) >= 0;
+            return '<label style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;">' +
+                   '<input type="checkbox" class="perm-gr-chk" value="' + g + '"' + (checked ? ' checked' : '') + ' style="width:15px;height:15px;accent-color:#ea580c;">' +
+                   '<span>Khối ' + g + '</span>' +
+                   '</label>';
+        }).join('');
+
+        m.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.25);border:1px solid #e2e8f0;display:flex;flex-direction:column;">' +
+            '<div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 18px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;">' +
+                '<div style="font-weight:900;font-size:16px;display:flex;align-items:center;gap:8px;"><span>🛡️</span> CẤP QUYỀN HỌC SINH (MÔN & KHỐI LỚP)</div>' +
+                '<button type="button" onclick="document.getElementById(\'bk-perm-modal\').style.display=\'none\'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:18px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>' +
+            '</div>' +
+            '<div style="padding:16px;display:flex;flex-direction:column;gap:16px;">' +
+                '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<b style="color:#1e1b4b;font-size:14px;">1. 📚 Môn học cho phép học sinh xem:</b>' +
+                        '<div style="display:flex;gap:6px;">' +
+                            '<button type="button" id="btn-perm-hoa-only" style="background:#e0e7ff;color:#4338ca;border:none;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;">Chỉ môn Hóa</button>' +
+                            '<button type="button" id="btn-perm-all-subj" style="background:#f1f5f9;color:#475569;border:none;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;">Tất cả</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="font-size:12px;color:#64748b;margin-bottom:10px;">Học sinh chỉ thấy các môn được tích chọn (mặc định chỉ có <b>Hóa học</b> của Thầy Thọ).</div>' +
+                    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-height:170px;overflow-y:auto;padding:2px;">' +
+                        subjCheckboxes +
+                    '</div>' +
+                '</div>' +
+                '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:12px;">' +
+                    '<b style="color:#7c2d12;font-size:14px;">2. 🏫 Phân quyền Khối lớp cho học sinh:</b>' +
+                    '<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">' +
+                        '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#0f172a;">' +
+                            '<input type="radio" name="perm-grade-mode" value="my_grade_only"' + (pm.gradeMode === 'my_grade_only' ? ' checked' : '') + ' style="margin-top:3px;accent-color:#ea580c;">' +
+                            '<div><div>🎯 Học sinh khối nào CHỈ XEM khối đó <span style="background:#ea580c;color:#fff;font-size:10.5px;padding:1px 6px;border-radius:4px;margin-left:4px;">Khuyên dùng</span></div><div style="font-size:11.5px;color:#64748b;font-weight:normal;">HS lớp 10 chỉ thấy khối 10, lớp 12 chỉ thấy khối 12, không bị nhầm lẫn.</div></div>' +
+                        '</label>' +
+                        '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#0f172a;">' +
+                            '<input type="radio" name="perm-grade-mode" value="all_grades"' + (pm.gradeMode === 'all_grades' ? ' checked' : '') + ' style="margin-top:3px;accent-color:#ea580c;">' +
+                            '<div><div>🌐 Cho phép học sinh xem TẤT CẢ các khối lớp</div><div style="font-size:11.5px;color:#64748b;font-weight:normal;">Để học sinh ôn thi tốt nghiệp, thi ĐGNL hoặc học sinh giỏi ôn vượt cấp.</div></div>' +
+                        '</label>' +
+                        '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#0f172a;">' +
+                            '<input type="radio" name="perm-grade-mode" value="custom_grades"' + (pm.gradeMode === 'custom_grades' ? ' checked' : '') + ' style="margin-top:3px;accent-color:#ea580c;">' +
+                            '<div><div>⚙️ Tùy chọn mở các khối lớp chỉ định:</div></div>' +
+                        '</label>' +
+                        '<div id="perm-custom-grades-box" style="display:' + (pm.gradeMode === 'custom_grades' ? 'flex' : 'none') + ';flex-wrap:wrap;gap:6px;padding-left:24px;margin-top:4px;">' +
+                            gradesList +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 20px 20px;display:flex;justify-content:flex-end;gap:10px;">' +
+                '<button type="button" onclick="document.getElementById(\'bk-perm-modal\').style.display=\'none\'" style="padding:8px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-weight:800;font-size:13.5px;cursor:pointer;">Đóng</button>' +
+                '<button type="button" id="btn-save-perm" style="padding:8px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.35);">💾 LƯU CẤP QUYỀN</button>' +
+            '</div>' +
+        '</div>';
+        
+        m.style.display = 'flex';
+        
+        var btnHoaOnly = m.querySelector('#btn-perm-hoa-only');
+        if (btnHoaOnly) btnHoaOnly.onclick = function() {
+            m.querySelectorAll('.perm-sj-chk').forEach(function(c) {
+                c.checked = (c.value === 'Hóa học');
+                var lbl = c.closest('label');
+                if (lbl) { lbl.style.borderColor = c.checked ? '#6366f1' : '#cbd5e1'; lbl.style.background = c.checked ? '#eef2ff' : '#fff'; }
+            });
+        };
+        var btnAllSubj = m.querySelector('#btn-perm-all-subj');
+        if (btnAllSubj) btnAllSubj.onclick = function() {
+            m.querySelectorAll('.perm-sj-chk').forEach(function(c) {
+                c.checked = true;
+                var lbl = c.closest('label');
+                if (lbl) { lbl.style.borderColor = '#6366f1'; lbl.style.background = '#eef2ff'; }
+            });
+        };
+        m.querySelectorAll('.perm-sj-chk').forEach(function(c) {
+            c.onchange = function() {
+                var lbl = c.closest('label');
+                if (lbl) { lbl.style.borderColor = c.checked ? '#6366f1' : '#cbd5e1'; lbl.style.background = c.checked ? '#eef2ff' : '#fff'; }
+            };
+        });
+        m.querySelectorAll('input[name="perm-grade-mode"]').forEach(function(r) {
+            r.onchange = function() {
+                var cg = m.querySelector('#perm-custom-grades-box');
+                if (cg) cg.style.display = (r.value === 'custom_grades') ? 'flex' : 'none';
+            };
+        });
+        var btnSave = m.querySelector('#btn-save-perm');
+        if (btnSave) btnSave.onclick = function() {
+            var selSubjs = [];
+            m.querySelectorAll('.perm-sj-chk:checked').forEach(function(c) { selSubjs.push(c.value); });
+            if (!selSubjs.length) selSubjs = ['Hóa học'];
+            var gmRadio = m.querySelector('input[name="perm-grade-mode"]:checked');
+            var gm = gmRadio ? gmRadio.value : 'my_grade_only';
+            var selGrades = [];
+            m.querySelectorAll('.perm-gr-chk:checked').forEach(function(c) { selGrades.push(+c.value); });
+            if (!selGrades.length) selGrades = [10, 11, 12];
+            var newPerms = { allowedSubjects: selSubjs, gradeMode: gm, customGrades: selGrades };
+            savePerms(newPerms);
+            m.style.display = 'none';
+            render();
+            if (typeof showAppToast === 'function') showAppToast('🎉 Đã lưu cấp quyền học sinh thành công!', 'success');
+            else alert('Đã lưu cấp quyền học sinh thành công!');
+        };
+    }
+
     function onClick0(e) {
         var t = e.target, q = function (s) { return t.closest ? t.closest(s) : null; }, b;
         if ((b = q('[data-bksync]'))) { BS.manual(b.getAttribute('data-bksync')); return; }
         if ((b = q('[data-go]'))) { path = path.slice(0, +b.getAttribute('data-go')); render(); return; }
         if ((b = q('[data-mvs]'))) { if (!b.disabled && !isStu()) moveSubj(b.getAttribute('data-mvs'), +b.getAttribute('data-d')); return; }   /* [CODE158] */
+        if (q('[data-bkperm]')) { openPermModal(); return; }
         if ((b = q('[data-sj]'))) { path = [b.getAttribute('data-sj')]; render(); return; }
         if ((b = q('[data-gr]'))) { path = [path[0], +b.getAttribute('data-gr')]; render(); return; }
         if (q('[data-bkexp]')) { exportBank(); return; }
@@ -24445,6 +24696,7 @@ try { if (!isStu() && !localStorage.getItem(LSK0 + '_c137')) { st.lessons = {}; 
     })();
 
     var API = { sync: BS, path: function () { return path.slice(); },
+        getPerms: getPerms, savePerms: savePerms, getStudentGrade: getStudentGradeNum, openPermModal: openPermModal,
         /* [CODE153] đọc danh sách môn / khối / bài + câu hỏi cho trình soạn đề */
         subjectNames: function () { return subjects(); },
         gradesOf: function (sj) { var i = info(sj); return i ? i[2].slice() : []; },
