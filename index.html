@@ -469,6 +469,23 @@ Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
             }
         }
 
+
+        function autoBeautifyAllQuestions(kind) {
+            const draft = getImportDraft(kind);
+            if (!draft || !draft.length) return;
+            let count = 0;
+            draft.forEach(q => {
+                const orig = q.text;
+                const b = beautifyQuestionStem(orig);
+                if (b !== orig) {
+                    q.text = b;
+                    count++;
+                }
+            });
+            renderImportPreview(kind);
+            showModal('✨ CÂN CHỈNH THẨM MỸ HOÀN TẤT', `Đã tự động bóc tách và cân chỉnh thẩm mỹ cho ${count > 0 ? count : draft.length} câu hỏi trong đề!\n\nCác phương trình hóa học và danh sách các ý (a), (b), (c)... đã được bố cục ngay ngắn, thoáng mắt và học sinh dễ đọc hơn.`);
+        }
+
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,300;1,400;1,700;1,900&amp;display=swap&amp;subset=vietnamese" rel="stylesheet">
     <style>
@@ -1175,6 +1192,54 @@ Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
         @media (max-width: 700px) { #left-sidebar #btn-mix-sidebar { display: none !important; } }
         #left-sidebar .side-btn:active { transform: scale(0.96); }
     
+        /* ===== [CODE-BEAUTIFY] BÓC TÁCH CÂN CHỈNH THẨM MỸ CÂU HỎI ===== */
+        .q-stem-sublist {
+            margin: 6px 0 8px 4px;
+            padding: 6px 12px 6px 14px;
+            border-left: 3px solid #6366f1;
+            background: #f8fafc;
+            border-radius: 0 10px 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .q-stem-sublist.q-sublist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 6px 20px;
+        }
+        .q-stem-subitem {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            font-family: 'Roboto', 'Segoe UI', sans-serif !important;
+        }
+        .q-stem-subitem .q-sub-label {
+            color: #4338ca !important;
+            font-weight: 700 !important;
+            flex-shrink: 0;
+        }
+        .q-stem-subitem .q-sub-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .q-reaction-block {
+            text-align: center !important;
+            margin: 8px auto !important;
+            padding: 6px 14px !important;
+            background: #f1f5f9 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            max-width: 96% !important;
+            display: block !important;
+            font-family: 'Roboto', 'Segoe UI', sans-serif !important;
+        }
+
         /* ===== [CODE17] Phần II (đúng - sai) & Phần III (trả lời ngắn) ===== */
         :is(#questions-container, .qc-live) .q-part-header { margin-top: 4px; }
         :is(#questions-container, .qc-live) .q-part-header .q-part-title,
@@ -3360,6 +3425,10 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                                 <button type="button" id="word-ai-verify-btn" onclick="startAIVerification('word')" class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs shadow-sm transition active:scale-95" title="Sử dụng Gemini AI để giải độc lập, đối soát và tự động sửa các câu có đáp án bị sai">
                                     <span>🤖</span>
                                     <span>AI Thẩm định &amp; Tự sửa đáp án</span>
+                                </button>
+                                <button type="button" onclick="autoBeautifyAllQuestions('word')" class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs shadow-sm transition active:scale-95" title="Tự động bóc tách các ý (a), (b), (c)... và ngắt dòng phương trình phản ứng cho cân đối, đẹp mắt">
+                                    <span>✨</span>
+                                    <span>Cân chỉnh thẩm mỹ</span>
                                 </button>
                                 <button type="button" onclick="openAISettingsModal()" title="Cài đặt API Key AI" class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs border border-slate-300 font-bold transition flex items-center gap-1">
                                     <span>⚙️</span>
@@ -7574,9 +7643,98 @@ function findVercelStudent(query) {
             return out;
         }
 
+        // ============================================================
+        // [CODE-BEAUTIFY] HÀM BÓC TÁCH CÂN CHỈNH THẨM MỸ NỘI DUNG CÂU HỎI
+        // Tách các ý (a), (b), (c)... và phương trình phản ứng thành bố cục thoáng, đẹp mắt
+        // ============================================================
+        function beautifyQuestionStem(text) {
+            if (!text || typeof text !== 'string') return text;
+
+            let s = text.trim();
+
+            // Dạng 1: Các nhãn trong ngoặc đơn (a), (b), (c)... hoặc (1), (2), (3)... hoặc (I), (II)...
+            const parensLabels = (s.match(/\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\)/g) || []);
+            if (parensLabels.length >= 2) {
+                // Tách câu dẫn nhập nếu dính liền với nhãn đầu tiên (VD: "Cho các yếu tố sau: (a) ...")
+                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\))/gi, '$1\n$2');
+                
+                // Ngắt dòng trước các nhãn tiếp theo (b), (c), (d)...
+                s = s.replace(/([,\;]?)\s+(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\))\s+/g, (match, punct, label, offset) => {
+                    if (offset === 0) return label + ' ';
+                    return '\n' + label + ' ';
+                });
+
+                // Tách câu hỏi chốt ở cuối nếu dính liền với ý cuối cùng
+                const trailingQRe = /([\.?!;]?)\s+((?:có\s+bao\s+nhiêu|số\s+(?:lượng|phản\s*ứng|yếu\s*tố|phát\s*biểu|thí\s*nghiệm|ứng\s*dụng|chất|đồng\s*phân|chất\s*khí|kết\s*tủa|dung\s*dịch|nhận\s*định|mệnh\s*đề)|hãy\s*cho\s*biết|dãy\s*gồm|trong\s*các\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố|thí\s*nghiệm|chất)\s*trên|những\s*(?:phát\s*biểu|phản\s*ứng|yếu\s*tố)\s*nào|yếu\s*tố\s*nào|phát\s*biểu\s*nào)\b[^\n]+)$/i;
+                s = s.replace(trailingQRe, (m, p, q) => '\n' + q);
+            }
+
+            // Dạng 2: Các nhãn dạng 1), 2), 3) hoặc a), b), c) nếu dính liền trên 1 dòng
+            const noParenLabels = (s.match(/(?:^|\s)([a-hA-H]|\d{1,2})\)\s+/g) || []);
+            if (noParenLabels.length >= 2) {
+                s = s.replace(/((?:cho|xét|tiến\s*hành|thực\s*hiện)\s+(?:các|những)?\s*[^:\n\.\?]+[:\.])\s*([a-hA-H]|\d{1,2}\))/gi, '$1\n$2');
+                s = s.replace(/([,\;]?)\s+([a-hA-H]|\d{1,2})\)\s+/g, '\n$2) ');
+            }
+
+            // Tách phương trình phản ứng hóa học đứng giữa văn bản nếu dính liền với câu dẫn
+            s = s.replace(/(theo\s+phương\s+trình\s+(?:hoá|hóa)\s+học\s*[:\.])\s*([A-Za-z0-9\(\[\$])/gi, '$1\n$2');
+            s = s.replace(/(\-\?\s*\d+\s*(?:kJ|kcal|J|kJ\/mol|mol))\s+(cho\s+các\b)/gi, '$1\n$2');
+
+            return s;
+        }
+
+        function renderBeautifiedLines(str) {
+            if (!str) return '';
+            const lines = str.split(/\r?\n/);
+            let subItems = [];
+            let out = [];
+
+            const flushSubItems = () => {
+                if (!subItems.length) return;
+                const allShort = subItems.every(it => it.text.length < 55);
+                const gridClass = allShort ? 'q-stem-sublist q-sublist-grid' : 'q-stem-sublist';
+                const inner = subItems.map(it => 
+                    `<div class="q-stem-subitem"><b class="q-sub-label">${it.label}</b><span class="q-sub-text">${it.text}</span></div>`
+                ).join('');
+                out.push(`<div class="${gridClass}">${inner}</div>`);
+                subItems = [];
+            };
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                const m = trimmed.match(/^(\((?:[a-hA-H]|\d{1,2}|[ivxIVX]{1,4})\)|(?:[a-hA-H]|\d{1,2})\))\s*(.*)$/);
+                if (m) {
+                    subItems.push({ label: m[1], text: m[2] });
+                } else {
+                    flushSubItems();
+                    const isReactionLine = /(?:\\(?:rightleftharpoons|xrightarrow|to|rightarrow)|[⇌→])/.test(trimmed) && !/^(?:câu|cho|xét|có|hãy|số)\b/i.test(trimmed);
+                    if (isReactionLine && trimmed.length < 160) {
+                        out.push(`<div class="q-reaction-block">${trimmed}</div>`);
+                    } else {
+                        out.push(trimmed);
+                    }
+                }
+            });
+            flushSubItems();
+            
+            let html = '';
+            for (let i = 0; i < out.length; i++) {
+                const cur = out[i];
+                if (i === 0) { html += cur; continue; }
+                const prev = out[i - 1];
+                const isBlock = cur.startsWith('<div') || prev.endsWith('</div>');
+                html += (isBlock ? '' : '<br>') + cur;
+            }
+            return html;
+        }
+
         function formatMathAndChemHTML(rawText, fmtOpts) {
             if (!rawText) return '';
             let str = String(rawText);
+            // [CODE-BEAUTIFY] Tự động bóc tách cân chỉnh câu hỏi có (a), (b), (c)...
+            str = beautifyQuestionStem(str);
 
             // 0. [CODE31-BẢNG] Dựng lại bảng từ token @@TBL_..@@ (nuốt dấu xuống dòng sát bảng vì bảng là khối riêng)
             const tblPlaceholders = [];
@@ -7796,8 +7954,8 @@ function findVercelStudent(query) {
                 str = str.replace(/\u2060{2,4}/g, '');
             }
 
-            // [CODE9] Giữ nguyên các dòng xuống dòng của đề gốc (VD: câu có (1), (2), (3)... mỗi ý một dòng)
-            str = str.replace(/[ \t]*\r?\n[ \t]*/g, '<br>');
+            // [CODE9 + CODE-BEAUTIFY] Bóc tách & dàn trang thẩm mỹ các ý (a), (b), (c)... và phương trình hóa học
+            str = renderBeautifiedLines(str);
 
             // 5. Khôi phục các token KaTeX và Ảnh
             mathPlaceholders.forEach((html, idx) => {
