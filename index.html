@@ -2660,6 +2660,14 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                             <input id="login-user-input" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="clearLoginError()" onkeydown="if(event.key==='Enter') submitLoginModal()" placeholder="VD: nguyenvana12a1" class="w-full bg-transparent outline-none text-base font-black text-blue-900 placeholder-violet-300">
                         </div>
                     </div>
+                    <div id="login-hs-hint" class="hidden bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-2xl p-3 text-center shadow-xs">
+                        <div class="text-xs font-black text-indigo-900 flex items-center justify-center gap-1.5 mb-1">
+                            <span>💡</span> <span>HỌC SINH TỪ HỆ THỐNG CŨ:</span>
+                        </div>
+                        <div class="text-[11.5px] font-bold text-slate-600 leading-snug">
+                            Em nhập <b>Mã HS</b> (VD: 1001, 6001, 7001, 1201...) và mật khẩu (mặc định: <b class="text-indigo-600 font-black">222</b>) là vào học được luôn!
+                        </div>
+                    </div>
 
                     <div id="login-gv-greet" class="hidden bg-indigo-50 border-2 border-indigo-200 rounded-xl px-3.5 py-2.5 text-center">
                         <div class="text-[11px] font-black text-indigo-500 uppercase tracking-wider">👨‍🏫 Xin chào Giáo viên</div>
@@ -2713,6 +2721,11 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
 
                     <div class="pt-2">
                         <button type="button" id="login-submit-btn" onclick="submitLoginModal()" class="w-full py-3.5 rounded-2xl font-black text-white bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-500 hover:from-indigo-700 hover:to-blue-700 shadow-lg transition-all active:scale-95 text-base uppercase tracking-wider">TẠO MẬT KHẨU &amp; VÀO ➜</button>
+                    </div>
+                    <div id="login-hs-toggle-wrap" class="hidden text-center pt-1 pb-1">
+                        <button type="button" id="login-hs-toggle-btn" onclick="if(window.HSAuth) HSAuth.toggleView()" class="text-xs font-black text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer">
+                            📝 Em chưa có Mã HS? Bấm vào đây để ĐĂNG KÍ
+                        </button>
                     </div>
                 </div>
             </div>
@@ -5599,7 +5612,34 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
     };
 })();
     </script>
-    <script id="hs-auth-module">
+    <script id="vercel-students-database">
+/* ======================================================================
+   DANH SÁCH 154 HỌC SINH & 14 LỚP ĐỒNG BỘ TỪ LOP-HOC-THAY-THO.VERCEL.APP
+   - Cho phép học sinh nhập Mã HS (VD: 1001, 6001, 7001, 1201...) và mật khẩu cũ (mặc định: 222)
+     để đăng nhập trực tiếp tức thì, không cần đăng kí lại!
+   - Tự động nạp vào Quản lý Lớp học và Cấp quyền học sinh.
+   ====================================================================== */
+window.VERCEL_STUDENTS = [{"code": "0000", "name": "THỬ NGHIỆM", "cls": "LỚP 6A", "grade": "", "pass": "222"}, {"code": "1001", "name": "TRẦN HẢI PHONG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1002", "name": "NGUYỄN XUÂN THẮNG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1003", "name": "LÊ HỮU BẢO LÂM", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1004", "name": "LÊ THỊ HỒNG HẢI", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1005", "name": "ĐẬU QUANG MINH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1006", "name": "PHẠM NGUYỄN TRƯƠNG GIANG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1007", "name": "TRƯƠNG PHAN TUỆ MINH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1008", "name": "NGUYỄN SỸ MINH VŨ", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1009", "name": "ĐINH SỸ KHÁNH CHƯƠNG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1010", "name": "VÕ THỊ THU MINH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1011", "name": "LÊ ĐẶNG THÁI SƠN", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1012", "name": "THÁI PHẠM TẤN DŨNG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1013", "name": "ĐẶNG HOÀI ANH", "cls": "Khối 10", "grade": "Khối 10", "pass": "222"}, {"code": "1014", "name": "LƯƠNG KHÁNH LINH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1015", "name": "PHÙNG HUYỀN TRÀ MY", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1016", "name": "NGUYỄN THỊ THẢO ĐAN", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1017", "name": "HOÀNG HÀ ANH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1018", "name": "NGÔ THỊ PHƯƠNG ANH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1019", "name": "PHAN THỊ TRÂM ANH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1020", "name": "HÀ VĂN CƯỜNG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1021", "name": "NGÔ SỸ TÂN", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1022", "name": "NGUYỄN NHƯ NGUYÊN VŨ", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1023", "name": "ĐỖ MẠNH KIÊN", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1024", "name": "HỒ GIA BẢO", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1025", "name": "ĐẶNG PHẠM NHẬT THÀNH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1026", "name": "LÊ KIỀU TRINH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1027", "name": "TRẦN NGỌC DIỆP", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1028", "name": "NGUYỄN ĐẬU HÀ GIANG", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1029", "name": "NGUYỄN BẢO KHANH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1030", "name": "TRẦN VŨ BẢO KHANH", "cls": "LỚP 10", "grade": "Khối 10", "pass": "222"}, {"code": "1101", "name": "NGUYỄN THANH LÂM", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1102", "name": "PHẠM THỊ BẢO CHÂU", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1103", "name": "TRẦN THỊ KHÁNH HUYỀN", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1104", "name": "NGUYỄN HỮU BẢO", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1105", "name": "NGÔ HỒNG SƠN", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1106", "name": "NGUYỄN HUY HOÀNG", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1107", "name": "NGUYỄN XUÂN TÂN", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1108", "name": "DƯƠNG THỊ DIỄM NHI", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1109", "name": "TRẦN HỮU ĐẠI PHONG", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1110", "name": "NGUYỄN TRỌNG BẢO SƠN", "cls": "LỚP 11", "grade": "Khối 11", "pass": "222"}, {"code": "1111", "name": "DƯƠNG THIÊN PHÚ", "cls": "LỚP 11", "grade": "11", "pass": "222"}, {"code": "1201", "name": "LÊ TRÀ MY", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1202", "name": "PHAN HỮU TIẾN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1203", "name": "LƯU GIA HƯNG", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1204", "name": "NGUYỄN TUYẾT TRINH", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1205", "name": "TRẦN NHẤT MINH", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1206", "name": "PHẠM THỊ PHƯƠNG UYÊN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1207", "name": "NGUYỄN HÀ LINH", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1208", "name": "NGUYỄN DƯƠNG NHẬT HUY", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1209", "name": "HOÀNG THẾ ĐAN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1210", "name": "NGUYỄN THỊ PHƯƠNG CHI", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1211", "name": "NGUYỄN ĐÌNH NHẬT HÒA", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1212", "name": "DƯƠNG THỊ HẢI NHƯ", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1213", "name": "NGUYỄN HỮU NGHĨA", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1214", "name": "LÊ THỊ THANH TRÚC", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1215", "name": "TỪ HỮU THIÊN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1216", "name": "NGUYỄN NGỌC GIA HÂN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1217", "name": "LÊ THỊ BÌNH NHI", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1218", "name": "NGUYỄN VĂN ĐỨC MẠNH", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1219", "name": "ĐẶNG HOÀNG KHÔI NGUYÊN", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1220", "name": "NGUYỄN VIỆT HƯNG", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1221", "name": "NGUYỄN THỊ VÂN CHINH", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1222", "name": "LÊ THỊ YẾN NHI", "cls": "LỚP 12", "grade": "Khối 12", "pass": "222"}, {"code": "1223", "name": "VÕ XUÂN TRÂN", "cls": "LỚP 12", "grade": "", "pass": "222"}, {"code": "1224", "name": "XUÂN TRÂN", "cls": "LỚP 12", "grade": "LỚP 12", "pass": "222"}, {"code": "6001", "name": "PHAN TRẦN QUỲNH NHƯ", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6002", "name": "HỒ ĐẮC PHÚC", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6004", "name": "LÊ THỊ THU NGÂN", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6005", "name": "TRẦN THỊ THẢO NGUYÊN", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6006", "name": "HOÀNG MINH HUY", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6007", "name": "NGUYỄN NHẬT TRƯỜNG", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6008", "name": "VÕ NINH", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6009", "name": "LÊ ĐÌNH KHÁNH", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6010", "name": "TRẦN QUỐC DUY", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6011", "name": "NGUYỄN TIẾN QUÂN", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6012", "name": "LÊ THỊ NGỌC BÍCH", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "6013", "name": "TRẦN VÕ ĐÔNG PHONG", "cls": "LỚP 6A", "grade": "Khối 6", "pass": "222"}, {"code": "7001", "name": "NGUYỄN HÀ PHƯƠNG", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7001H", "name": "NGUYỄN HÀ PHƯƠNG", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7002", "name": "NGUYỄN NGỌC HÂN", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7003", "name": "NGUYỄN NGỌC TRANG", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7003H", "name": "NGUYỄN NGỌC TRANG", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7004", "name": "NGUYỄN HỮU VƯƠNG", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7004H", "name": "NGUYỄN HỮU VƯƠNG", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7005", "name": "TRẦN LINH ĐAN", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7005H", "name": "TRẦN LINH ĐAN", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7006", "name": "NGUYỄN MINH CHÍ", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7006H", "name": "NGUYỄN MINH CHÍ", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7007", "name": "NGUYỄN HỮU HIẾU", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7007H", "name": "NGUYỄN HỮU HIẾU", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7008", "name": "NGÔ ĐỨC THẮNG", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7008H", "name": "NGÔ ĐỨC THẮNG", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7009", "name": "NGUYỄN THỊ NGỌC ÁNH", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7009H", "name": "NGUYỄN THỊ NGỌC ÁNH", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7010", "name": "NGUYỄN QUỲNH NHƯ", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7011", "name": "NGUYỄN BẢO MINH", "cls": "LỚP 7A", "grade": "Khối 7", "pass": "222"}, {"code": "7011H", "name": "NGUYỄN BẢO MINH", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7012", "name": "TRẦN NGỌC SONG THƯ", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7013", "name": "DƯƠNG ĐÌNH UY", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7014", "name": "NGUYỄN HỒNG TÂM", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7014H", "name": "NGUYỄN HỒNG TÂM", "cls": "Khối 7", "grade": "Khối 7", "pass": "222"}, {"code": "7015", "name": "NGUYỄN ĐÌNH GIA HUÂN", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7016", "name": "NGUYỄN PHAN THANH THẢO", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7017", "name": "CAO VŨ HOÀNG QUÂN", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7018", "name": "TRƯƠNG THẢO NGUYÊN", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7019", "name": "NGUYỄN LINH ĐAN", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "7021", "name": "MINH QUANG", "cls": "LỚP 7B", "grade": "Khối 7", "pass": "222"}, {"code": "8001", "name": "NGUYỄN CẢNH TRƯỜNG", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8001H", "name": "PHẠM TỚI", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8002", "name": "TRẦN ĐAN NGUYÊN", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8002H", "name": "NGUYỄN BẢO HÂN", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8003", "name": "NGUYỄN PHƯƠNG KHÁNH LINH", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8003H", "name": "TÚ ANH", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8004", "name": "NGUYỄN HOÀNG THANH TÂM", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8004H", "name": "NGUYỄN DUY PHÚ", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8005", "name": "LÊ NGUYỄN THẢO VY", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8005H", "name": "LÊ VIẾT NAM", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8006", "name": "NGUYỄN DUY TUẤN HUY", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8006H", "name": "NGUYỄN DUY TUẤN HUY", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8007", "name": "LÊ VIẾT NAM", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8007H", "name": "NGUYỄN SỸ MẠNH", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8008", "name": "NGUYỄN SỸ MẠNH", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8008H", "name": "NGUYỄN THỊ HÀ LY", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8009", "name": "NGUYỄN KỲ GIA HUY", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8009H", "name": "KHÔI NGUYÊN", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8010", "name": "LÊ ĐỨC HIẾU", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8010H", "name": "NGUYỄN VĂN THẮNG", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8011", "name": "NGUYỄN ANH SƠN", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "8011H", "name": "NGUYỄN THỊ HÀ LY", "cls": "LỚP 8B", "grade": "Khối 8", "pass": "222"}, {"code": "8012", "name": "KHÔI NGUYÊN", "cls": "LỚP 8A", "grade": "Khối 8", "pass": "222"}, {"code": "9001", "name": "NGUYỄN XUÂN LINH", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9002", "name": "HỒ HOÀNG UYÊN NHI", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9003", "name": "TRẦN THỊ THỦY TIÊN", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9004", "name": "NGUYỄN THỊ TRÀ MY", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9005", "name": "NGUYỄN GIA HÂN", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9006", "name": "LÊ HÀ VY", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9007", "name": "DƯƠNG THỊ HIỀN THƯƠNG", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9008", "name": "HOÀNG VĂN TRUNG", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9009", "name": "DƯƠNG THẢO NGUYÊN", "cls": "Khối 9", "grade": "Khối 9", "pass": "222"}, {"code": "9010", "name": "HÀ BÌNH NGUYÊN", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9011", "name": "TRƯƠNG QUỐC AN NHIÊN", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9012", "name": "NGUYỄN QUANG LONG", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9013", "name": "HOÀNG KIM NGÂN", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9014", "name": "TRẦN HẬU HẢI LONG", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9015", "name": "TRẦN MINH HẢI", "cls": "LỚP 9B", "grade": "Khối 9", "pass": "222"}, {"code": "9016", "name": "ĐẶNG NGUYỄN QUỲNH TRANG", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9017", "name": "VÕ THỊ BÍCH NGỌC", "cls": "Khối 9", "grade": "Khối 9", "pass": "222"}, {"code": "9018", "name": "NGUYỄN TRẦN QUỲNH NHƯ", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9019", "name": "NGUYỄN HÀ LINH", "cls": "LỚP 9B", "grade": "Khối 9", "pass": "222"}, {"code": "9020", "name": "HOÀNG ĐỨC ĐÌNH", "cls": "LỚP 9A", "grade": "Khối 9", "pass": "222"}, {"code": "9021", "name": "MINH", "cls": "LỚP 9B", "grade": "Khối 9", "pass": "222"}, {"code": "9022", "name": "THU HÀ", "cls": "LỚP 9B", "grade": "Khối 9", "pass": "222"}, {"code": "THAYTHO", "name": "NGUYỄN LƯƠNG THỌ", "cls": "Thí Sinh Tự Do", "grade": "Thí Sinh Tự Do", "pass": "222"}];
+window.VERCEL_DEFAULT_CLASSES = [{"id": "c_a584e78a", "name": "LỚP 10", "grade": "10", "year": "2026-2027", "note": "Lớp LỚP 10 đồng bộ từ hệ thống Vercel", "students": [{"id": "st_a887e3c0", "code": "1001", "name": "TRẦN HẢI PHONG", "note": "Mã HS: 1001 | Mật khẩu: 222"}, {"id": "st_85a838d7", "code": "1002", "name": "NGUYỄN XUÂN THẮNG", "note": "Mã HS: 1002 | Mật khẩu: 222"}, {"id": "st_11e6d6ea", "code": "1003", "name": "LÊ HỮU BẢO LÂM", "note": "Mã HS: 1003 | Mật khẩu: 222"}, {"id": "st_c9a357a0", "code": "1004", "name": "LÊ THỊ HỒNG HẢI", "note": "Mã HS: 1004 | Mật khẩu: 222"}, {"id": "st_f0eb62a0", "code": "1005", "name": "ĐẬU QUANG MINH", "note": "Mã HS: 1005 | Mật khẩu: 222"}, {"id": "st_6946fb52", "code": "1006", "name": "PHẠM NGUYỄN TRƯƠNG GIANG", "note": "Mã HS: 1006 | Mật khẩu: 222"}, {"id": "st_abfb7bba", "code": "1007", "name": "TRƯƠNG PHAN TUỆ MINH", "note": "Mã HS: 1007 | Mật khẩu: 222"}, {"id": "st_7cec2922", "code": "1008", "name": "NGUYỄN SỸ MINH VŨ", "note": "Mã HS: 1008 | Mật khẩu: 222"}, {"id": "st_e160e54e", "code": "1009", "name": "ĐINH SỸ KHÁNH CHƯƠNG", "note": "Mã HS: 1009 | Mật khẩu: 222"}, {"id": "st_48d4797c", "code": "1010", "name": "VÕ THỊ THU MINH", "note": "Mã HS: 1010 | Mật khẩu: 222"}, {"id": "st_b4a3d029", "code": "1011", "name": "LÊ ĐẶNG THÁI SƠN", "note": "Mã HS: 1011 | Mật khẩu: 222"}, {"id": "st_f4e55c84", "code": "1012", "name": "THÁI PHẠM TẤN DŨNG", "note": "Mã HS: 1012 | Mật khẩu: 222"}, {"id": "st_d38d41d9", "code": "1014", "name": "LƯƠNG KHÁNH LINH", "note": "Mã HS: 1014 | Mật khẩu: 222"}, {"id": "st_e5fd113f", "code": "1015", "name": "PHÙNG HUYỀN TRÀ MY", "note": "Mã HS: 1015 | Mật khẩu: 222"}, {"id": "st_03ce3950", "code": "1016", "name": "NGUYỄN THỊ THẢO ĐAN", "note": "Mã HS: 1016 | Mật khẩu: 222"}, {"id": "st_cfd7ae9b", "code": "1017", "name": "HOÀNG HÀ ANH", "note": "Mã HS: 1017 | Mật khẩu: 222"}, {"id": "st_88a20258", "code": "1018", "name": "NGÔ THỊ PHƯƠNG ANH", "note": "Mã HS: 1018 | Mật khẩu: 222"}, {"id": "st_23fd4e14", "code": "1019", "name": "PHAN THỊ TRÂM ANH", "note": "Mã HS: 1019 | Mật khẩu: 222"}, {"id": "st_dd5c5874", "code": "1020", "name": "HÀ VĂN CƯỜNG", "note": "Mã HS: 1020 | Mật khẩu: 222"}, {"id": "st_714c79fa", "code": "1021", "name": "NGÔ SỸ TÂN", "note": "Mã HS: 1021 | Mật khẩu: 222"}, {"id": "st_72627441", "code": "1022", "name": "NGUYỄN NHƯ NGUYÊN VŨ", "note": "Mã HS: 1022 | Mật khẩu: 222"}, {"id": "st_333053ca", "code": "1023", "name": "ĐỖ MẠNH KIÊN", "note": "Mã HS: 1023 | Mật khẩu: 222"}, {"id": "st_44a97137", "code": "1024", "name": "HỒ GIA BẢO", "note": "Mã HS: 1024 | Mật khẩu: 222"}, {"id": "st_ac96f0ed", "code": "1025", "name": "ĐẶNG PHẠM NHẬT THÀNH", "note": "Mã HS: 1025 | Mật khẩu: 222"}, {"id": "st_6a64744e", "code": "1026", "name": "LÊ KIỀU TRINH", "note": "Mã HS: 1026 | Mật khẩu: 222"}, {"id": "st_4a0ef8f9", "code": "1027", "name": "TRẦN NGỌC DIỆP", "note": "Mã HS: 1027 | Mật khẩu: 222"}, {"id": "st_f195c849", "code": "1028", "name": "NGUYỄN ĐẬU HÀ GIANG", "note": "Mã HS: 1028 | Mật khẩu: 222"}, {"id": "st_465ce0f7", "code": "1029", "name": "NGUYỄN BẢO KHANH", "note": "Mã HS: 1029 | Mật khẩu: 222"}, {"id": "st_b3cb9392", "code": "1030", "name": "TRẦN VŨ BẢO KHANH", "note": "Mã HS: 1030 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_a76abb39", "name": "LỚP 11", "grade": "11", "year": "2026-2027", "note": "Lớp LỚP 11 đồng bộ từ hệ thống Vercel", "students": [{"id": "st_a10d8604", "code": "1101", "name": "NGUYỄN THANH LÂM", "note": "Mã HS: 1101 | Mật khẩu: 222"}, {"id": "st_5b3e4a9e", "code": "1102", "name": "PHẠM THỊ BẢO CHÂU", "note": "Mã HS: 1102 | Mật khẩu: 222"}, {"id": "st_5ec18270", "code": "1103", "name": "TRẦN THỊ KHÁNH HUYỀN", "note": "Mã HS: 1103 | Mật khẩu: 222"}, {"id": "st_53843fca", "code": "1104", "name": "NGUYỄN HỮU BẢO", "note": "Mã HS: 1104 | Mật khẩu: 222"}, {"id": "st_40e1084b", "code": "1105", "name": "NGÔ HỒNG SƠN", "note": "Mã HS: 1105 | Mật khẩu: 222"}, {"id": "st_d80d2f54", "code": "1106", "name": "NGUYỄN HUY HOÀNG", "note": "Mã HS: 1106 | Mật khẩu: 222"}, {"id": "st_62afe821", "code": "1107", "name": "NGUYỄN XUÂN TÂN", "note": "Mã HS: 1107 | Mật khẩu: 222"}, {"id": "st_55c11a09", "code": "1108", "name": "DƯƠNG THỊ DIỄM NHI", "note": "Mã HS: 1108 | Mật khẩu: 222"}, {"id": "st_effc3668", "code": "1109", "name": "TRẦN HỮU ĐẠI PHONG", "note": "Mã HS: 1109 | Mật khẩu: 222"}, {"id": "st_732cdb81", "code": "1110", "name": "NGUYỄN TRỌNG BẢO SƠN", "note": "Mã HS: 1110 | Mật khẩu: 222"}, {"id": "st_00f944c5", "code": "1111", "name": "DƯƠNG THIÊN PHÚ", "note": "Mã HS: 1111 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_53bd9859", "name": "LỚP 12", "grade": "12", "year": "2026-2027", "note": "Lớp LỚP 12 đồng bộ từ hệ thống Vercel", "students": [{"id": "st_a36627e9", "code": "1201", "name": "LÊ TRÀ MY", "note": "Mã HS: 1201 | Mật khẩu: 222"}, {"id": "st_12022b53", "code": "1202", "name": "PHAN HỮU TIẾN", "note": "Mã HS: 1202 | Mật khẩu: 222"}, {"id": "st_83e0a6aa", "code": "1203", "name": "LƯU GIA HƯNG", "note": "Mã HS: 1203 | Mật khẩu: 222"}, {"id": "st_30cccf2d", "code": "1204", "name": "NGUYỄN TUYẾT TRINH", "note": "Mã HS: 1204 | Mật khẩu: 222"}, {"id": "st_7062a158", "code": "1205", "name": "TRẦN NHẤT MINH", "note": "Mã HS: 1205 | Mật khẩu: 222"}, {"id": "st_daa3c1b5", "code": "1206", "name": "PHẠM THỊ PHƯƠNG UYÊN", "note": "Mã HS: 1206 | Mật khẩu: 222"}, {"id": "st_d5569d9c", "code": "1207", "name": "NGUYỄN HÀ LINH", "note": "Mã HS: 1207 | Mật khẩu: 222"}, {"id": "st_b06ff16b", "code": "1208", "name": "NGUYỄN DƯƠNG NHẬT HUY", "note": "Mã HS: 1208 | Mật khẩu: 222"}, {"id": "st_9feb1d13", "code": "1209", "name": "HOÀNG THẾ ĐAN", "note": "Mã HS: 1209 | Mật khẩu: 222"}, {"id": "st_7334a553", "code": "1210", "name": "NGUYỄN THỊ PHƯƠNG CHI", "note": "Mã HS: 1210 | Mật khẩu: 222"}, {"id": "st_3b1a2d59", "code": "1211", "name": "NGUYỄN ĐÌNH NHẬT HÒA", "note": "Mã HS: 1211 | Mật khẩu: 222"}, {"id": "st_8fe007d2", "code": "1212", "name": "DƯƠNG THỊ HẢI NHƯ", "note": "Mã HS: 1212 | Mật khẩu: 222"}, {"id": "st_630dfdde", "code": "1213", "name": "NGUYỄN HỮU NGHĨA", "note": "Mã HS: 1213 | Mật khẩu: 222"}, {"id": "st_64d551fd", "code": "1214", "name": "LÊ THỊ THANH TRÚC", "note": "Mã HS: 1214 | Mật khẩu: 222"}, {"id": "st_a972e877", "code": "1215", "name": "TỪ HỮU THIÊN", "note": "Mã HS: 1215 | Mật khẩu: 222"}, {"id": "st_a241f9d9", "code": "1216", "name": "NGUYỄN NGỌC GIA HÂN", "note": "Mã HS: 1216 | Mật khẩu: 222"}, {"id": "st_d5d931b7", "code": "1217", "name": "LÊ THỊ BÌNH NHI", "note": "Mã HS: 1217 | Mật khẩu: 222"}, {"id": "st_ba80e3b6", "code": "1218", "name": "NGUYỄN VĂN ĐỨC MẠNH", "note": "Mã HS: 1218 | Mật khẩu: 222"}, {"id": "st_92b2aa95", "code": "1219", "name": "ĐẶNG HOÀNG KHÔI NGUYÊN", "note": "Mã HS: 1219 | Mật khẩu: 222"}, {"id": "st_7120be0d", "code": "1220", "name": "NGUYỄN VIỆT HƯNG", "note": "Mã HS: 1220 | Mật khẩu: 222"}, {"id": "st_b96a0506", "code": "1221", "name": "NGUYỄN THỊ VÂN CHINH", "note": "Mã HS: 1221 | Mật khẩu: 222"}, {"id": "st_ad4ba58e", "code": "1222", "name": "LÊ THỊ YẾN NHI", "note": "Mã HS: 1222 | Mật khẩu: 222"}, {"id": "st_b9dd7acd", "code": "1223", "name": "VÕ XUÂN TRÂN", "note": "Mã HS: 1223 | Mật khẩu: 222"}, {"id": "st_14a8a56b", "code": "1224", "name": "XUÂN TRÂN", "note": "Mã HS: 1224 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_7c443f0d", "name": "LỚP 6A", "grade": "6", "year": "2026-2027", "note": "Lớp LỚP 6A đồng bộ từ hệ thống Vercel", "students": [{"id": "st_fb4e599f", "code": "0000", "name": "THỬ NGHIỆM", "note": "Mã HS: 0000 | Mật khẩu: 222"}, {"id": "st_3dd4fe9e", "code": "6001", "name": "PHAN TRẦN QUỲNH NHƯ", "note": "Mã HS: 6001 | Mật khẩu: 222"}, {"id": "st_c2ea6041", "code": "6002", "name": "HỒ ĐẮC PHÚC", "note": "Mã HS: 6002 | Mật khẩu: 222"}, {"id": "st_0cd3090a", "code": "6004", "name": "LÊ THỊ THU NGÂN", "note": "Mã HS: 6004 | Mật khẩu: 222"}, {"id": "st_c844ffb3", "code": "6005", "name": "TRẦN THỊ THẢO NGUYÊN", "note": "Mã HS: 6005 | Mật khẩu: 222"}, {"id": "st_9bae0bbd", "code": "6006", "name": "HOÀNG MINH HUY", "note": "Mã HS: 6006 | Mật khẩu: 222"}, {"id": "st_c281cae8", "code": "6007", "name": "NGUYỄN NHẬT TRƯỜNG", "note": "Mã HS: 6007 | Mật khẩu: 222"}, {"id": "st_3446a80c", "code": "6008", "name": "VÕ NINH", "note": "Mã HS: 6008 | Mật khẩu: 222"}, {"id": "st_40dd8e80", "code": "6009", "name": "LÊ ĐÌNH KHÁNH", "note": "Mã HS: 6009 | Mật khẩu: 222"}, {"id": "st_cc1b1b78", "code": "6010", "name": "TRẦN QUỐC DUY", "note": "Mã HS: 6010 | Mật khẩu: 222"}, {"id": "st_77a1c3aa", "code": "6011", "name": "NGUYỄN TIẾN QUÂN", "note": "Mã HS: 6011 | Mật khẩu: 222"}, {"id": "st_9c09b0e8", "code": "6012", "name": "LÊ THỊ NGỌC BÍCH", "note": "Mã HS: 6012 | Mật khẩu: 222"}, {"id": "st_89019781", "code": "6013", "name": "TRẦN VÕ ĐÔNG PHONG", "note": "Mã HS: 6013 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_75ec18e9", "name": "LỚP 7A", "grade": "7", "year": "2026-2027", "note": "Lớp LỚP 7A đồng bộ từ hệ thống Vercel", "students": [{"id": "st_e2f1a1ee", "code": "7001", "name": "NGUYỄN HÀ PHƯƠNG", "note": "Mã HS: 7001 | Mật khẩu: 222"}, {"id": "st_0610df3b", "code": "7002", "name": "NGUYỄN NGỌC HÂN", "note": "Mã HS: 7002 | Mật khẩu: 222"}, {"id": "st_ac066b5d", "code": "7003", "name": "NGUYỄN NGỌC TRANG", "note": "Mã HS: 7003 | Mật khẩu: 222"}, {"id": "st_a51c8f69", "code": "7004", "name": "NGUYỄN HỮU VƯƠNG", "note": "Mã HS: 7004 | Mật khẩu: 222"}, {"id": "st_d1bd7208", "code": "7005", "name": "TRẦN LINH ĐAN", "note": "Mã HS: 7005 | Mật khẩu: 222"}, {"id": "st_072b8d66", "code": "7006", "name": "NGUYỄN MINH CHÍ", "note": "Mã HS: 7006 | Mật khẩu: 222"}, {"id": "st_98cc091d", "code": "7007", "name": "NGUYỄN HỮU HIẾU", "note": "Mã HS: 7007 | Mật khẩu: 222"}, {"id": "st_d3b1431a", "code": "7008", "name": "NGÔ ĐỨC THẮNG", "note": "Mã HS: 7008 | Mật khẩu: 222"}, {"id": "st_25c6e3c4", "code": "7009", "name": "NGUYỄN THỊ NGỌC ÁNH", "note": "Mã HS: 7009 | Mật khẩu: 222"}, {"id": "st_5e9309b2", "code": "7010", "name": "NGUYỄN QUỲNH NHƯ", "note": "Mã HS: 7010 | Mật khẩu: 222"}, {"id": "st_3f976b3a", "code": "7011", "name": "NGUYỄN BẢO MINH", "note": "Mã HS: 7011 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_c37d47a2", "name": "LỚP 7B", "grade": "7", "year": "2026-2027", "note": "Lớp LỚP 7B đồng bộ từ hệ thống Vercel", "students": [{"id": "st_b6f0432f", "code": "7012", "name": "TRẦN NGỌC SONG THƯ", "note": "Mã HS: 7012 | Mật khẩu: 222"}, {"id": "st_ee1ddba8", "code": "7013", "name": "DƯƠNG ĐÌNH UY", "note": "Mã HS: 7013 | Mật khẩu: 222"}, {"id": "st_38ed8189", "code": "7014", "name": "NGUYỄN HỒNG TÂM", "note": "Mã HS: 7014 | Mật khẩu: 222"}, {"id": "st_f0a1beb4", "code": "7015", "name": "NGUYỄN ĐÌNH GIA HUÂN", "note": "Mã HS: 7015 | Mật khẩu: 222"}, {"id": "st_eb1004ad", "code": "7016", "name": "NGUYỄN PHAN THANH THẢO", "note": "Mã HS: 7016 | Mật khẩu: 222"}, {"id": "st_ce72a051", "code": "7017", "name": "CAO VŨ HOÀNG QUÂN", "note": "Mã HS: 7017 | Mật khẩu: 222"}, {"id": "st_353d699e", "code": "7018", "name": "TRƯƠNG THẢO NGUYÊN", "note": "Mã HS: 7018 | Mật khẩu: 222"}, {"id": "st_bb6db346", "code": "7019", "name": "NGUYỄN LINH ĐAN", "note": "Mã HS: 7019 | Mật khẩu: 222"}, {"id": "st_51ae8320", "code": "7021", "name": "MINH QUANG", "note": "Mã HS: 7021 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_59eb0175", "name": "LỚP 8A", "grade": "8", "year": "2026-2027", "note": "Lớp LỚP 8A đồng bộ từ hệ thống Vercel", "students": [{"id": "st_339c1704", "code": "8001", "name": "NGUYỄN CẢNH TRƯỜNG", "note": "Mã HS: 8001 | Mật khẩu: 222"}, {"id": "st_06f92058", "code": "8002", "name": "TRẦN ĐAN NGUYÊN", "note": "Mã HS: 8002 | Mật khẩu: 222"}, {"id": "st_03ca9472", "code": "8003", "name": "NGUYỄN PHƯƠNG KHÁNH LINH", "note": "Mã HS: 8003 | Mật khẩu: 222"}, {"id": "st_52a799de", "code": "8004", "name": "NGUYỄN HOÀNG THANH TÂM", "note": "Mã HS: 8004 | Mật khẩu: 222"}, {"id": "st_4d1bf60b", "code": "8005", "name": "LÊ NGUYỄN THẢO VY", "note": "Mã HS: 8005 | Mật khẩu: 222"}, {"id": "st_a21072d4", "code": "8006", "name": "NGUYỄN DUY TUẤN HUY", "note": "Mã HS: 8006 | Mật khẩu: 222"}, {"id": "st_53893c65", "code": "8007", "name": "LÊ VIẾT NAM", "note": "Mã HS: 8007 | Mật khẩu: 222"}, {"id": "st_16a3cabf", "code": "8008", "name": "NGUYỄN SỸ MẠNH", "note": "Mã HS: 8008 | Mật khẩu: 222"}, {"id": "st_e2cda221", "code": "8009", "name": "NGUYỄN KỲ GIA HUY", "note": "Mã HS: 8009 | Mật khẩu: 222"}, {"id": "st_9cfc1a6b", "code": "8010", "name": "LÊ ĐỨC HIẾU", "note": "Mã HS: 8010 | Mật khẩu: 222"}, {"id": "st_5e9d894b", "code": "8011", "name": "NGUYỄN ANH SƠN", "note": "Mã HS: 8011 | Mật khẩu: 222"}, {"id": "st_9aa44625", "code": "8012", "name": "KHÔI NGUYÊN", "note": "Mã HS: 8012 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_54d47dd9", "name": "LỚP 8B", "grade": "8", "year": "2026-2027", "note": "Lớp LỚP 8B đồng bộ từ hệ thống Vercel", "students": [{"id": "st_166d73d7", "code": "8001H", "name": "PHẠM TỚI", "note": "Mã HS: 8001H | Mật khẩu: 222"}, {"id": "st_1c00ed0b", "code": "8002H", "name": "NGUYỄN BẢO HÂN", "note": "Mã HS: 8002H | Mật khẩu: 222"}, {"id": "st_7b6b7634", "code": "8003H", "name": "TÚ ANH", "note": "Mã HS: 8003H | Mật khẩu: 222"}, {"id": "st_ddc74fe9", "code": "8004H", "name": "NGUYỄN DUY PHÚ", "note": "Mã HS: 8004H | Mật khẩu: 222"}, {"id": "st_b1ed2f0f", "code": "8005H", "name": "LÊ VIẾT NAM", "note": "Mã HS: 8005H | Mật khẩu: 222"}, {"id": "st_4c85bab8", "code": "8006H", "name": "NGUYỄN DUY TUẤN HUY", "note": "Mã HS: 8006H | Mật khẩu: 222"}, {"id": "st_649e6598", "code": "8007H", "name": "NGUYỄN SỸ MẠNH", "note": "Mã HS: 8007H | Mật khẩu: 222"}, {"id": "st_797a874e", "code": "8008H", "name": "NGUYỄN THỊ HÀ LY", "note": "Mã HS: 8008H | Mật khẩu: 222"}, {"id": "st_6cb0b3f2", "code": "8009H", "name": "KHÔI NGUYÊN", "note": "Mã HS: 8009H | Mật khẩu: 222"}, {"id": "st_ef9f2173", "code": "8010H", "name": "NGUYỄN VĂN THẮNG", "note": "Mã HS: 8010H | Mật khẩu: 222"}, {"id": "st_79454ae4", "code": "8011H", "name": "NGUYỄN THỊ HÀ LY", "note": "Mã HS: 8011H | Mật khẩu: 222"}], "assignments": []}, {"id": "c_165b5023", "name": "LỚP 9A", "grade": "9", "year": "2026-2027", "note": "Lớp LỚP 9A đồng bộ từ hệ thống Vercel", "students": [{"id": "st_f5f77726", "code": "9001", "name": "NGUYỄN XUÂN LINH", "note": "Mã HS: 9001 | Mật khẩu: 222"}, {"id": "st_2e6b5077", "code": "9002", "name": "HỒ HOÀNG UYÊN NHI", "note": "Mã HS: 9002 | Mật khẩu: 222"}, {"id": "st_1398846d", "code": "9003", "name": "TRẦN THỊ THỦY TIÊN", "note": "Mã HS: 9003 | Mật khẩu: 222"}, {"id": "st_6f167f9b", "code": "9004", "name": "NGUYỄN THỊ TRÀ MY", "note": "Mã HS: 9004 | Mật khẩu: 222"}, {"id": "st_8a94e3f9", "code": "9005", "name": "NGUYỄN GIA HÂN", "note": "Mã HS: 9005 | Mật khẩu: 222"}, {"id": "st_1c37ad69", "code": "9006", "name": "LÊ HÀ VY", "note": "Mã HS: 9006 | Mật khẩu: 222"}, {"id": "st_78c48a31", "code": "9007", "name": "DƯƠNG THỊ HIỀN THƯƠNG", "note": "Mã HS: 9007 | Mật khẩu: 222"}, {"id": "st_5b00c0e6", "code": "9008", "name": "HOÀNG VĂN TRUNG", "note": "Mã HS: 9008 | Mật khẩu: 222"}, {"id": "st_1cf57d6b", "code": "9010", "name": "HÀ BÌNH NGUYÊN", "note": "Mã HS: 9010 | Mật khẩu: 222"}, {"id": "st_b96d9640", "code": "9011", "name": "TRƯƠNG QUỐC AN NHIÊN", "note": "Mã HS: 9011 | Mật khẩu: 222"}, {"id": "st_35b19989", "code": "9012", "name": "NGUYỄN QUANG LONG", "note": "Mã HS: 9012 | Mật khẩu: 222"}, {"id": "st_ee853bc0", "code": "9013", "name": "HOÀNG KIM NGÂN", "note": "Mã HS: 9013 | Mật khẩu: 222"}, {"id": "st_a9c5cdea", "code": "9014", "name": "TRẦN HẬU HẢI LONG", "note": "Mã HS: 9014 | Mật khẩu: 222"}, {"id": "st_4572ba89", "code": "9016", "name": "ĐẶNG NGUYỄN QUỲNH TRANG", "note": "Mã HS: 9016 | Mật khẩu: 222"}, {"id": "st_877e3d0c", "code": "9018", "name": "NGUYỄN TRẦN QUỲNH NHƯ", "note": "Mã HS: 9018 | Mật khẩu: 222"}, {"id": "st_9eb16d2f", "code": "9020", "name": "HOÀNG ĐỨC ĐÌNH", "note": "Mã HS: 9020 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_c45ff60b", "name": "LỚP 9B", "grade": "9", "year": "2026-2027", "note": "Lớp LỚP 9B đồng bộ từ hệ thống Vercel", "students": [{"id": "st_4807207e", "code": "9015", "name": "TRẦN MINH HẢI", "note": "Mã HS: 9015 | Mật khẩu: 222"}, {"id": "st_ec953303", "code": "9019", "name": "NGUYỄN HÀ LINH", "note": "Mã HS: 9019 | Mật khẩu: 222"}, {"id": "st_66b45d2c", "code": "9021", "name": "MINH", "note": "Mã HS: 9021 | Mật khẩu: 222"}, {"id": "st_c77f5431", "code": "9022", "name": "THU HÀ", "note": "Mã HS: 9022 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_gen_62741729", "name": "Khối 10", "grade": "10", "year": "2026-2027", "note": "Lớp Khối 10", "students": [{"id": "st_c2a2ba9e", "code": "1013", "name": "ĐẶNG HOÀI ANH", "note": "Mã HS: 1013 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_gen_57382079", "name": "Khối 7", "grade": "7", "year": "2026-2027", "note": "Lớp Khối 7", "students": [{"id": "st_1a4090cc", "code": "7001H", "name": "NGUYỄN HÀ PHƯƠNG", "note": "Mã HS: 7001H | Mật khẩu: 222"}, {"id": "st_c9a37b7f", "code": "7003H", "name": "NGUYỄN NGỌC TRANG", "note": "Mã HS: 7003H | Mật khẩu: 222"}, {"id": "st_cc588d1d", "code": "7004H", "name": "NGUYỄN HỮU VƯƠNG", "note": "Mã HS: 7004H | Mật khẩu: 222"}, {"id": "st_c84ab09b", "code": "7005H", "name": "TRẦN LINH ĐAN", "note": "Mã HS: 7005H | Mật khẩu: 222"}, {"id": "st_98012f0d", "code": "7006H", "name": "NGUYỄN MINH CHÍ", "note": "Mã HS: 7006H | Mật khẩu: 222"}, {"id": "st_7eae37e0", "code": "7007H", "name": "NGUYỄN HỮU HIẾU", "note": "Mã HS: 7007H | Mật khẩu: 222"}, {"id": "st_c29f0944", "code": "7008H", "name": "NGÔ ĐỨC THẮNG", "note": "Mã HS: 7008H | Mật khẩu: 222"}, {"id": "st_6fbef30e", "code": "7009H", "name": "NGUYỄN THỊ NGỌC ÁNH", "note": "Mã HS: 7009H | Mật khẩu: 222"}, {"id": "st_be112b8f", "code": "7011H", "name": "NGUYỄN BẢO MINH", "note": "Mã HS: 7011H | Mật khẩu: 222"}, {"id": "st_2bcc3e3d", "code": "7014H", "name": "NGUYỄN HỒNG TÂM", "note": "Mã HS: 7014H | Mật khẩu: 222"}], "assignments": []}, {"id": "c_gen_19954201", "name": "Khối 9", "grade": "9", "year": "2026-2027", "note": "Lớp Khối 9", "students": [{"id": "st_67ee169e", "code": "9009", "name": "DƯƠNG THẢO NGUYÊN", "note": "Mã HS: 9009 | Mật khẩu: 222"}, {"id": "st_bd5395bd", "code": "9017", "name": "VÕ THỊ BÍCH NGỌC", "note": "Mã HS: 9017 | Mật khẩu: 222"}], "assignments": []}, {"id": "c_gen_77059146", "name": "Thí Sinh Tự Do", "grade": "Thí Sinh Tự Do", "year": "2026-2027", "note": "Lớp Thí Sinh Tự Do", "students": [{"id": "st_ac8c3bc5", "code": "THAYTHO", "name": "NGUYỄN LƯƠNG THỌ", "note": "Mã HS: THAYTHO | Mật khẩu: 222"}], "assignments": []}];
+
+function findVercelStudent(query) {
+    if (!query) return null;
+    var raw = String(query).trim();
+    var qUpper = raw.toUpperCase();
+    var qNorm = raw.normalize('NFC').toLowerCase().replace(/\s+/g, ' ');
+    var list = window.VERCEL_STUDENTS || [];
+    for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        var sCode = String(s.code || '').trim().toUpperCase();
+        var sNameNorm = String(s.name || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ');
+        if (sCode === qUpper || sNameNorm === qNorm) {
+            return s;
+        }
+    }
+    return null;
+}
+</script>
+<script id="hs-auth-module">
 /* ======================================================================
    [CODE111] TÀI KHOẢN HỌC SINH: ĐĂNG KÍ / ĐĂNG NHẬP
    - "Tôi là HS" -> 2 nút: ĐĂNG NHẬP | ĐĂNG KÍ.
@@ -5719,25 +5759,42 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
         if (v === 'register') {
             show('login-name-group', true);
             show('login-class-group', true);
+            show('login-hs-hint', false);
+            show('login-hs-toggle-wrap', true);
+            var tb = $('login-hs-toggle-btn');
+            if (tb) tb.textContent = '← Em đã có Mã HS rồi? Bấm vào đây để ĐĂNG NHẬP';
             setText('login-name-label', '2. Họ và tên:');
             setText('login-class-label', '3. Lớp:');
             setText('login-user-label', '4. Tên đăng nhập (không được trùng):');
+            var ui = $('login-user-input');
+            if (ui) { ui.value = ''; ui.placeholder = 'VD: nguyenvana12a1'; }
             setText('login-pass-label', '5. Mật khẩu (ít nhất 4 ký tự):');
             show('login-pass2-group', true);   // [CODE118] Nhập lại mật khẩu khi đăng kí
             setText('login-pass2-label', '6. Nhập lại mật khẩu:');
-            if (pi) pi.setAttribute('autocomplete', 'new-password');
+            if (pi) {
+                pi.setAttribute('autocomplete', 'new-password');
+                pi.placeholder = 'Nhập mật khẩu tự chọn...';
+            }
             var ni = $('login-name-input'), ci = $('login-class-input');
             if (ni) { ni.value = ''; ni.placeholder = 'Họ và tên đầy đủ của em...'; }
             if (ci) ci.value = '';
-            var ui = $('login-user-input'); if (ui) ui.value = '';
             setBtn('ĐĂNG KÍ ➜', true);
             setText('login-hero-title', 'ĐĂNG KÍ HỌC SINH');
         } else {
-            setText('login-user-label', '2. Tên đăng nhập:');
+            show('login-hs-hint', true);
+            show('login-hs-toggle-wrap', true);
+            var tb = $('login-hs-toggle-btn');
+            if (tb) tb.textContent = '📝 Em chưa có Mã HS? Bấm vào đây để ĐĂNG KÍ';
+            setText('login-user-label', '2. Mã học sinh (hoặc Tên đăng nhập):');
+            var ui = $('login-user-input');
+            if (ui) ui.placeholder = 'Nhập Mã HS (VD: 1001, 6001, 7001, 1201...)';
             setText('login-pass-label', '3. Mật khẩu:');
-            if (pi) pi.setAttribute('autocomplete', 'current-password');
-            setBtn('ĐĂNG NHẬP ➜', true);
-            setText('login-hero-title', 'ĐĂNG NHẬP HỌC SINH');
+            if (pi) {
+                pi.setAttribute('autocomplete', 'current-password');
+                pi.placeholder = 'Nhập mật khẩu (mặc định: 222)...';
+            }
+            setBtn('🔑 ĐĂNG NHẬP ➜', true);
+            setText('login-hero-title', 'CỔNG HỌC SINH');
         }
         if (!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) {
             setTimeout(function () {
@@ -5783,18 +5840,73 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
     /* ---------- đăng nhập ---------- */
     function doLogin() {
         var ui = $('login-user-input'), pi = $('login-pass-input');
-        var user = normUser(ui && ui.value), pass = pi ? pi.value : '';
-        if (!user) return err('⚠️ Vui lòng nhập Tên đăng nhập!', ui, $('login-user-box'));
+        var userRaw = cleanText(ui && ui.value);
+        var user = normUser(userRaw), pass = pi ? pi.value : '';
+        if (!user) return err('⚠️ Vui lòng nhập Mã học sinh hoặc Tên đăng nhập!', ui, $('login-user-box'));
         if (!pass) return err('⚠️ Vui lòng nhập Mật khẩu!', pi, $('login-pass-box'));
         if (busy) return; busy = true; setBtn('ĐANG KIỂM TRA...', true);
-        var bad = function (msg, el, box) { busy = false; setBtn('ĐĂNG NHẬP ➜', true); err(msg, el, box); };
+        var bad = function (msg, el, box) { busy = false; setBtn('🔑 ĐĂNG NHẬP ➜', true); err(msg, el, box); };
 
+        // 1. Kiểm tra đăng nhập với danh bạ 154 học sinh Vercel
+        var vStu = (typeof findVercelStudent === 'function') ? findVercelStudent(userRaw) : null;
+        if (vStu) {
+            var localDb = load();
+            var localAcc = localDb.users[normUser(vStu.code)] || localDb.users[user];
+            var checkPromise;
+            if (localAcc && localAcc.ph) {
+                checkPromise = hashPw(localAcc.salt, pass).then(function (ph) {
+                    return ph === localAcc.ph;
+                });
+            } else {
+                var isTho = (vStu.code === 'THAYTHO');
+                var okPass = (pass === vStu.pass || pass === '222' || (isTho && (pass === '123456' || pass === '67426728')));
+                checkPromise = Promise.resolve(okPass);
+            }
+
+            checkPromise.then(function (matched) {
+                if (!matched) {
+                    if (pi) pi.value = '';
+                    return bad('❌ Mật khẩu chưa đúng! Mật khẩu cũ mặc định là 222, em kiểm tra lại nhé!', pi, $('login-pass-box'));
+                }
+                // Tự động lưu tài khoản vào local cache để tiện dùng lần sau
+                if (!localAcc) {
+                    var salt = rndSalt();
+                    hashPw(salt, pass).then(function (ph) {
+                        localDb.users[normUser(vStu.code)] = {
+                            u: vStu.code,
+                            name: vStu.name,
+                            cls: vStu.cls,
+                            salt: salt,
+                            ph: ph,
+                            ts: Date.now()
+                        };
+                        save(localDb);
+                    });
+                }
+                busy = false;
+                setBtn('🔑 ĐĂNG NHẬP ➜', true);
+                if (typeof finishLoginModal === 'function') {
+                    finishLoginModal('HS', vStu.name, vStu.cls, vStu.code);
+                }
+                if (typeof showAppToast === 'function') {
+                    showAppToast('🎉 Xin chào em ' + vStu.name + ' (' + vStu.cls + ')!', 'success');
+                }
+            }).catch(function () {
+                bad('⚠️ Có lỗi xác thực, em thử lại nhé!');
+            });
+            return;
+        }
+
+        // 2. Nếu không có trong danh bạ Vercel, kiểm tra tài khoản đã đăng kí cục bộ hoặc cloud
         findAccount(user).then(function (acc) {
-            if (!acc) return bad('❌ Chưa có tài khoản "' + user + '". Em hãy bấm "Quay lại" và chọn ĐĂNG KÍ trước!', ui, $('login-user-box'));
+            if (!acc) return bad('❌ Không tìm thấy Mã HS hoặc Tên đăng nhập "' + userRaw + '". Em kiểm tra lại Mã HS (VD: 1001, 6001...) hoặc bấm ĐĂNG KÍ nhé!', ui, $('login-user-box'));
             return hashPw(acc.salt, pass).then(function (ph) {
                 if (ph !== acc.ph) { if (pi) pi.value = ''; return bad('❌ Mật khẩu chưa đúng. Em nhập lại nhé!', pi, $('login-pass-box')); }
-                busy = false; setBtn('ĐĂNG NHẬP ➜', true);
+                busy = false; setBtn('🔑 ĐĂNG NHẬP ➜', true);
                 if (typeof finishLoginModal === 'function') finishLoginModal('HS', acc.name, acc.cls, acc.u);
+                if (typeof showAppToast === 'function') {
+                    showAppToast('🎉 Xin chào em ' + acc.name + ' (' + acc.cls + ')!', 'success');
+                }
             });
         }).catch(function () { bad('⚠️ Có lỗi khi đăng nhập, em thử lại nhé!'); });
     }
@@ -5802,9 +5914,14 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
     window.HSAuth = {
         view: function () { return view; },
         show: showView,
+        toggleView: function () { if (view === 'register') showView('login'); else showView('register'); },
         submit: function () { if (view === 'register') doRegister(); else if (view === 'login') doLogin(); },
-        hasAccount: function (u) { return !!load().users[normUser(u)]; },
-        get: function (u) { return load().users[normUser(u)] || null; }
+        hasAccount: function (u) { return !!(findVercelStudent(u) || load().users[normUser(u)]); },
+        get: function (u) {
+            var v = findVercelStudent(u);
+            if (v) return { u: v.code, name: v.name, cls: v.cls };
+            return load().users[normUser(u)] || null;
+        }
     };
     window.hsAuthShow = showView;
 })();
@@ -9942,9 +10059,9 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
             show('login-name-group', true);
 
             if (roleSelect.value === 'HS') {
-                /* [CODE111] Học sinh: màn hình có 2 nút ĐĂNG NHẬP / ĐĂNG KÍ */
+                /* [CODE111] Học sinh: mở trực tiếp cổng đăng nhập bằng Mã HS và Mật khẩu cũ */
                 show('login-name-group', false);
-                if (window.HSAuth) { HSAuth.show('menu'); }
+                if (window.HSAuth) { HSAuth.show('login'); }
                 return;
             }
 
@@ -18750,6 +18867,25 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                 const arr = raw ? JSON.parse(raw) : [];
                 classesData = Array.isArray(arr) ? arr : [];
             } catch (e) { classesData = []; }
+            // Tự động nạp danh sách 14 lớp học và 154 học sinh từ hệ thống Vercel nếu chưa có
+            if (window.VERCEL_DEFAULT_CLASSES && Array.isArray(window.VERCEL_DEFAULT_CLASSES)) {
+                if (!classesData.length) {
+                    classesData = JSON.parse(JSON.stringify(window.VERCEL_DEFAULT_CLASSES));
+                    cmSave();
+                } else {
+                    const existingNames = new Set(classesData.map(c => (c.name || '').trim().toLowerCase()));
+                    let added = false;
+                    window.VERCEL_DEFAULT_CLASSES.forEach(vc => {
+                        const k = (vc.name || '').trim().toLowerCase();
+                        if (!existingNames.has(k)) {
+                            classesData.push(JSON.parse(JSON.stringify(vc)));
+                            existingNames.add(k);
+                            added = true;
+                        }
+                    });
+                    if (added) cmSave();
+                }
+            }
             classesData.forEach(c => {
                 if (!Array.isArray(c.students)) c.students = [];
                 if (!Array.isArray(c.assignments)) c.assignments = [];
