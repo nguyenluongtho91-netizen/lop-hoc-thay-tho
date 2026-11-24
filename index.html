@@ -16674,7 +16674,14 @@ function findVercelStudent(query) {
                     const tfFound = Object.keys(preKeys.tf).length;
                     const saFound = Object.keys(preKeys.sa).length;
                     if (!out.report) out.report = { warnings: [], skipped: [] };
-                    out.report.warnings.unshift(`✨ Đã tự động nhận diện bảng đáp án (${applied} câu): Phần I (${mcFound} câu) • Phần II (${tfFound} câu) • Phần III (${saFound} câu).`);
+                    // Lọc bỏ cảnh báo thiếu đáp án cho Phần II và III nếu bảng đáp án đã bù đắp đủ
+                    if (tfFound > 0) {
+                        out.report.warnings = out.report.warnings.filter(w => !w.includes('Phần II:'));
+                    }
+                    if (saFound > 0) {
+                        out.report.warnings = out.report.warnings.filter(w => !w.includes('Phần III:'));
+                    }
+                    out.report.warnings.unshift(`✨ Đã tự động nhận diện bảng đáp án (${applied}/${out.length} câu): Phần I (${mcFound} câu) • Phần II (${tfFound} câu) • Phần III (${saFound} câu).`);
                 }
             }
 
@@ -16787,23 +16794,6 @@ function findVercelStudent(query) {
                 processSection(sec);
                 tagQuestionGroups(out.slice(before), gx.groups);
             });
-
-            // [MỚI] Tự động nhận diện bảng đáp án toàn diện (Phần I, II, III) từ tail hoặc richLines
-            try {
-                const candidateLines = (tail && tail.length >= 2) ? tail : richLines;
-                const compKeys = parseComprehensiveAnswerKey(candidateLines);
-                if (compKeys && compKeys.totalFound > 0) {
-                    const applied = applyComprehensiveAnswerKey(compKeys, out);
-                    if (applied > 0) {
-                        const mcFound = Object.keys(compKeys.mc).length;
-                        const tfFound = Object.keys(compKeys.tf).length;
-                        const saFound = Object.keys(compKeys.sa).length;
-                        report.warnings.unshift(`✨ Đã tự động nhận diện bảng đáp án (${applied} câu): Phần I (${mcFound} câu) • Phần II (${tfFound} câu) • Phần III (${saFound} câu).`);
-                    }
-                }
-            } catch (errKey) {
-                console.error('Lỗi nhận diện bảng đáp án tự động:', errKey);
-            }
 
             // 3. Báo cáo kiểm tra
             const c = countByType(out);
