@@ -204,6 +204,271 @@
         }
         window.addEventListener('load', function () { setTimeout(check, 1200); });
     })();
+
+        // ============================================================
+        // [CODE-AI] TÍCH HỢP GEMINI AI: THẨM ĐỊNH & TỰ SỬA ĐÁP ÁN NẾU SAI
+        // ============================================================
+        function getAIApiKey() {
+            return localStorage.getItem('gemini_api_key') || '';
+        }
+        function getAIModel() {
+            return localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+        }
+        function openAISettingsModal(onSavedCallback) {
+            let modal = document.getElementById('ai-settings-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'ai-settings-modal';
+                modal.className = 'fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+                        <div class="px-6 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white flex justify-between items-center">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-2xl">🤖</span>
+                                <div>
+                                    <h3 class="text-base font-black uppercase tracking-wide">Cài đặt AI Thẩm định Đề</h3>
+                                    <p class="text-xs text-violet-100 font-medium">Google Gemini AI</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="closeAISettingsModal()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition">✕</button>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase mb-1">Gemini API Key</label>
+                                <input id="ai-key-input" type="password" placeholder="Dán khóa API (AIzaSy...)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition">
+                                <p class="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
+                                    Khóa API được lưu an toàn trên trình duyệt của Thầy/Cô.
+                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="text-violet-600 font-bold hover:underline inline-flex items-center gap-0.5">Lấy API Key miễn phí tại Google AI Studio ↗</a>
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mô hình AI (Model)</label>
+                                <select id="ai-model-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:border-violet-500 outline-none">
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Thông minh, giải chính xác nhất)</option>
+                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Tốc độ cao, ổn định)</option>
+                                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2.5">
+                            <button type="button" onclick="closeAISettingsModal()" class="px-5 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-200 text-xs uppercase transition">Đóng</button>
+                            <button type="button" id="ai-save-key-btn" class="px-6 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase shadow-md transition active:scale-95">💾 Lưu cài đặt</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            const keyInput = document.getElementById('ai-key-input');
+            const modelSelect = document.getElementById('ai-model-select');
+            if (keyInput) keyInput.value = getAIApiKey();
+            if (modelSelect) modelSelect.value = getAIModel();
+            
+            document.getElementById('ai-save-key-btn').onclick = () => {
+                const val = keyInput.value.trim();
+                if (!val) {
+                    alert('Vui lòng nhập API Key để tiếp tục!');
+                    return;
+                }
+                localStorage.setItem('gemini_api_key', val);
+                localStorage.setItem('gemini_model', modelSelect.value);
+                closeAISettingsModal();
+                if (typeof onSavedCallback === 'function') onSavedCallback();
+            };
+            modal.classList.remove('hidden');
+        }
+        function closeAISettingsModal() {
+            const modal = document.getElementById('ai-settings-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function startAIVerification(kind) {
+            const apiKey = getAIApiKey();
+            if (!apiKey) {
+                openAISettingsModal(() => startAIVerification(kind));
+                return;
+            }
+            const draft = getImportDraft(kind);
+            if (!draft || !draft.length) {
+                alert('Chưa có câu hỏi nào trong màn hình kiểm tra để thẩm định!');
+                return;
+            }
+
+            const btn = document.getElementById(`${kind}-ai-verify-btn`);
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            }
+
+            const model = getAIModel();
+            const updateProgress = (cur, total) => {
+                if (btn) btn.innerHTML = `<span>⏳</span><span>AI đang thẩm định (${cur}/${total})...</span>`;
+            };
+
+            let totalFixed = 0;
+            const fixedDetails = [];
+
+            const batchSize = 5;
+            for (let i = 0; i < draft.length; i += batchSize) {
+                const batch = draft.slice(i, i + batchSize);
+                updateProgress(Math.min(i + batchSize, draft.length), draft.length);
+
+                const promptQuestions = batch.map((q, idx) => {
+                    const num = i + idx + 1;
+                    const t = qType(q);
+                    let curAns = '';
+                    if (t === 'mc') curAns = 'ABCD'[q.correctIndex] || q.correct || 'Chưa có';
+                    else if (t === 'tf') curAns = JSON.stringify((q.tfAnswers || []).map(v => v ? 'Đúng' : 'Sai'));
+                    else curAns = q.shortAnswer || 'Chưa có';
+
+                    return {
+                        num,
+                        type: t,
+                        text: q.text,
+                        options: (q.options || []).map(o => o.text),
+                        currentAnswer: curAns
+                    };
+                });
+
+                const promptText = `Bạn là chuyên gia thẩm định đề thi theo chuẩn GDPT 2018.
+Nhiệm vụ: Giải chi tiết từng câu hỏi dưới đây một cách độc lập, sau đó so sánh kết quả với "currentAnswer" của đề.
+- Nếu currentAnswer của đề SAI hoặc CHƯA CÓ: Chỉ ra đáp án ĐÚNG và giải thích ngắn gọn lý do sửa.
+- Nếu currentAnswer ĐÚNG: Xác nhận đúng.
+- Cung cấp lời giải chi tiết cho câu hỏi.
+
+Danh sách câu hỏi:
+${JSON.stringify(promptQuestions, null, 2)}
+
+Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
+[
+  {
+    "num": 1,
+    "isMatch": true hoặc false,
+    "correctAnswer": "A/B/C/D" (cho mc) | [true, false, true, false] (cho tf: 4 giá trị boolean) | "đáp số ngắn" (cho sa),
+    "reason": "Lý do sửa nếu phát hiện sai",
+    "solution": "Lời giải chi tiết từng bước"
+  }
+]`;
+
+                try {
+                    let apiModel = model;
+                    let endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
+                    let res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }],
+                            generationConfig: { temperature: 0.1 }
+                        })
+                    });
+
+                    // Fallback sang gemini-1.5-flash nếu model 2.5 chưa hỗ trợ endpoint
+                    if (!res.ok && apiModel !== 'gemini-1.5-flash') {
+                        apiModel = 'gemini-1.5-flash';
+                        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
+                        res = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: promptText }] }],
+                                generationConfig: { temperature: 0.1 }
+                            })
+                        });
+                    }
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `Lỗi HTTP ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    const textResp = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const jsonMatch = textResp.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                    if (!jsonMatch) continue;
+
+                    const aiResults = JSON.parse(jsonMatch[0]);
+                    aiResults.forEach(r => {
+                        const qIdx = r.num - 1;
+                        const q = draft[qIdx];
+                        if (!q) return;
+
+                        const t = qType(q);
+                        let changed = false;
+                        let oldVal = '';
+                        let newVal = '';
+
+                        if (t === 'mc') {
+                            oldVal = 'ABCD'[q.correctIndex] || q.correct || 'Chưa chọn';
+                            const targetLetter = String(r.correctAnswer || '').trim().toUpperCase();
+                            const newIdx = 'ABCD'.indexOf(targetLetter);
+                            if (newIdx >= 0 && (newIdx !== q.correctIndex || !q.detectedByStyle)) {
+                                newVal = targetLetter;
+                                q.correctIndex = newIdx;
+                                q.correct = targetLetter;
+                                q.detectedByStyle = true;
+                                changed = true;
+                            }
+                        } else if (t === 'tf') {
+                            oldVal = JSON.stringify((q.tfAnswers || []).map(v => v ? 'Đ' : 'S'));
+                            if (Array.isArray(r.correctAnswer) && r.correctAnswer.length === 4) {
+                                const newAns = r.correctAnswer.map(Boolean);
+                                if (!q.detectedByStyle || JSON.stringify(newAns) !== JSON.stringify(q.tfAnswers || [])) {
+                                    newVal = JSON.stringify(newAns.map(v => v ? 'Đ' : 'S'));
+                                    q.tfAnswers = newAns;
+                                    q.detectedByStyle = true;
+                                    changed = true;
+                                }
+                            }
+                        } else if (t === 'sa') {
+                            oldVal = q.shortAnswer || 'Chưa có';
+                            const newAns = String(r.correctAnswer || '').trim();
+                            if (newAns && (!q.detectedByStyle || newAns !== oldVal)) {
+                                newVal = newAns;
+                                q.shortAnswer = newAns;
+                                q.detectedByStyle = true;
+                                changed = true;
+                            }
+                        }
+
+                        if (r.solution && (!q.solution || changed)) {
+                            q.solution = r.solution;
+                        }
+
+                        if (changed) {
+                            totalFixed++;
+                            q._aiModified = true;
+                            q._aiReason = r.reason || 'AI phát hiện đáp án chưa chuẩn và đã tự sửa';
+                            fixedDetails.push(`• Câu ${r.num}: Đổi từ [${oldVal}] ➔ [${newVal}] (${q._aiReason})`);
+                        }
+                    });
+                } catch (eBatch) {
+                    console.error('Lỗi khi AI thẩm định batch:', eBatch);
+                    alert(`Lỗi AI: ${eBatch.message}. Thầy/Cô hãy kiểm tra lại API Key!`);
+                    break;
+                }
+            }
+
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.innerHTML = origHtml;
+            }
+
+            renderImportPreview(kind);
+
+            if (totalFixed > 0) {
+                showModal('🤖 AI ĐÃ THẨM ĐỊNH & SỬA ĐÁP ÁN', 
+                    `AI đã rà soát toàn bộ ${draft.length} câu hỏi.\n\n` +
+                    `🔧 ĐÃ TỰ ĐỘNG SỬA ${totalFixed} CÂU CÓ ĐÁP ÁN CHƯA ĐÚNG:\n` +
+                    fixedDetails.slice(0, 15).join('\n') +
+                    (fixedDetails.length > 15 ? `\n... và ${fixedDetails.length - 15} câu khác` : '') +
+                    `\n\nCác câu được sửa đã được gắn nhãn màu tím để Thầy/Cô kiểm tra lại.`
+                );
+            } else {
+                showModal('🤖 AI THẨM ĐỊNH HOÀN TẤT', `AI đã kiểm tra độc lập toàn bộ ${draft.length} câu hỏi.\n✓ Tất cả đáp án hiện tại đều chuẩn xác, không phát hiện sai sót!`);
+            }
+        }
+
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,300;1,400;1,700;1,900&amp;display=swap&amp;subset=vietnamese" rel="stylesheet">
     <style>
@@ -3092,6 +3357,13 @@ body.layout-portrait:not(.printing-a4) .c83-orbit {
                                 <span class="text-xs font-black text-slate-800 uppercase">Màn hình kiểm tra câu hỏi (Bước 3):</span>
                                 <span id="word-preview-badge" class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black">0 câu</span>
                                 <span id="word-mathtype-badge" class="hidden px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-black">0 công thức MathType</span>
+                                <button type="button" id="word-ai-verify-btn" onclick="startAIVerification('word')" class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs shadow-sm transition active:scale-95" title="Sử dụng Gemini AI để giải độc lập, đối soát và tự động sửa các câu có đáp án bị sai">
+                                    <span>🤖</span>
+                                    <span>AI Thẩm định &amp; Tự sửa đáp án</span>
+                                </button>
+                                <button type="button" onclick="openAISettingsModal()" title="Cài đặt API Key AI" class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs border border-slate-300 font-bold transition flex items-center gap-1">
+                                    <span>⚙️</span>
+                                </button>
                             </div>
                             <div class="flex items-center gap-3 text-xs font-bold shrink-0">
                                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="word-import-mode" value="replace" checked="" class="accent-sky-600"> Thay thế đề cũ</label>
@@ -8559,6 +8831,16 @@ function findVercelStudent(query) {
             setOpen(Boolean(solOpenSet[q.id]));
         }
 
+        function toggleAllSolutions(open) {
+            questionsData.forEach(q => { solOpenSet[q.id] = open; });
+            document.querySelectorAll('.sol-toggle-btn').forEach(btn => {
+                const panel = btn.nextElementSibling;
+                if (!panel || !panel.classList.contains('sol-panel')) return;
+                const isCurrentlyOpen = panel.style.display !== 'none';
+                if (open !== isCurrentlyOpen) btn.click();
+            });
+        }
+
         // [CODE17] Dựng 1 thẻ câu hỏi theo dạng (nhiều lựa chọn / đúng-sai / trả lời ngắn)
         function buildQuestionCard(q, idx, num, reviewing) {
             const t = qType(q);
@@ -9056,7 +9338,26 @@ function findVercelStudent(query) {
 
             const reviewing = isQuizSubmitted && !isPrintingMode && quizViewMode === 'review';
             if (reviewing && lastResult) {
-                
+                const solBar = document.createElement('div');
+                solBar.className = 'no-print mb-4 p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 flex flex-wrap items-center justify-between gap-3 shadow-sm';
+                solBar.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl">📖</span>
+                        <div>
+                            <span class="font-black text-amber-950 text-[15px] block">HƯỚNG DẪN GIẢI CHI TIẾT TỪNG CÂU</span>
+                            <span class="text-xs text-amber-800 font-medium">Bấm "💡 XEM HƯỚNG DẪN" ở từng câu hoặc bấm mở toàn bộ dưới đây</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="toggleAllSolutions(true)" class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow transition active:scale-95 flex items-center gap-1">
+                            <span>💡</span> <span>Mở tất cả lời giải</span>
+                        </button>
+                        <button type="button" onclick="toggleAllSolutions(false)" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs shadow-sm transition active:scale-95">
+                            ✖ Thu gọn
+                        </button>
+                    </div>
+                `;
+                container.appendChild(solBar);
             }
 
             const numbering = getNumbering();
@@ -12546,8 +12847,9 @@ function findVercelStudent(query) {
                     ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Phương án trống</span>`
                     : '';
 
+                const aiModBadge = q._aiModified ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-300 flex items-center gap-1">🤖 AI đã sửa (${impEsc(q._aiReason || '')})</span>` : '';
                 const hasSolImp = Boolean(String(q.solution || '').trim()) || (Array.isArray(q.tfSol) && q.tfSol.some(x => String(x || '').trim()));
-                const solBadgeHtml = (hasSolImp ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">📖 Có lời giải</span>` : '') + (q.level ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">🎯 ${q.level}</span>` : '');
+                const solBadgeHtml = aiModBadge + (hasSolImp ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">📖 Có lời giải</span>` : '') + (q.level ? `<span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">🎯 ${q.level}</span>` : '');
                 let answerAreaHtml = '';
                 if (t === 'mc') {
                     answerAreaHtml = `<div id="${kind}-prev-opts-${qIdx}" class="grid grid-cols-2 gap-1.5">${opts.map((opt, oIdx) => {
@@ -15963,7 +16265,7 @@ function findVercelStudent(query) {
         function parseTFSolutionLines(solLines) {
             const res = { tfSol: ['', '', '', ''], verdict: [null, null, null, null], general: '' };
             if (!solLines || !solLines.length) return res;
-            const markerRe = /^\s*\(?([a-dA-D])\s*[\)\.]\s*(?:(đúng|sai)(?![A-Za-zÀ-ỹ0-9])|([đĐsS])\s*$)\s*[:\-–\.]?\s*/i;
+            const markerRe = /^\s*\(?([a-dA-D])\s*[\)\.]\s*(?:(đúng|sai|true|false)|([đĐsS]))(?![A-Za-zÀ-ỹ0-9])\s*[:\-–\.]?\s*/i;
             const buckets = [[], [], [], []];
             const pre = [];
             let cur = -1;
@@ -16678,7 +16980,188 @@ function findVercelStudent(query) {
             if (window.__bankCtx && list.length && none > 0) rep.warnings.push(`${none} câu chưa có nhãn mức độ [NB] / [TH] / [VD] — có thể chọn mức độ trực tiếp trong khung soạn đề sau khi nạp.`);
             return list;
         }
-        function parseExamRichLines(richLines) {
+        
+        // ============================================================
+        // [CODE-SOL] TỰ ĐỘNG BÓC TÁCH LỜI GIẢI CHI TIẾT TỪ PHẦN ĐUÔI (tail) CỦA FILE WORD
+        // ============================================================
+        function extractSolutionsFromTail(tailRichLines, out) {
+            if (!tailRichLines || !tailRichLines.length || !out || !out.length) return 0;
+            
+            const plainLines = tailRichLines.map(l => richToPlain(l).trim());
+            let startIdx = plainLines.findIndex(p => /hướng\s*dẫn\s*giải|lời\s*giải\s*(?:chi\s*tiết)?|hướng\s*dẫn\s*chấm|đáp\s*án\s*và\s*(?:lời\s*giải|hướng\s*dẫn)/i.test(p));
+            if (startIdx < 0) {
+                startIdx = plainLines.findIndex(p => /^\s*phần\s*(?:[ivx]+|\d)\b/i.test(p));
+            }
+            if (startIdx < 0) startIdx = 0;
+            
+            const solLines = tailRichLines.slice(startIdx);
+            const solPlains = plainLines.slice(startIdx);
+            
+            let curSec = null;
+            const sections = [];
+            solLines.forEach((l, i) => {
+                const p = solPlains[i];
+                if (!p) return;
+                const pLow = p.toLowerCase();
+                let st = null;
+                if (/trả\s*lời\s*ngắn/.test(pLow) || /phần\s*(?:iii|3)\b/i.test(pLow)) st = 'sa';
+                else if (/đúng\s*[-–—\/,]?\s*(?:hoặc\s*)?sai/.test(pLow) || /phần\s*(?:ii|2)\b/i.test(pLow)) st = 'tf';
+                else if (/nhiều\s*(?:lựa\s*chọn|phương\s*án)|phần\s*(?:i|1)\b/i.test(pLow)) st = 'mc';
+                
+                if (st) {
+                    curSec = { type: st, lines: [], plains: [] };
+                    sections.push(curSec);
+                    return;
+                }
+                if (!curSec) {
+                    curSec = { type: null, lines: [], plains: [] };
+                    sections.push(curSec);
+                }
+                curSec.lines.push(l);
+                curSec.plains.push(p);
+            });
+
+            const qStartRe = /^\s*[\•\-\*​﻿]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?\d+\s*[\.\:\-\)\/]?|\d+\s*[\.\)\:])\s*/i;
+            const qNumRe = /^\s*[\•\-\*​﻿]*\s*(?:(?:câu|cau|question)\s*(?:số\s*)?)?(\d+)/i;
+            const tfMarkerRe = /^\s*\(?([a-dA-D])\s*[\)\.]\s*(?:(đúng|sai|true|false)|([đĐsS]))(?![A-Za-zÀ-ỹ0-9])\s*[:\-–\.]?\s*/i;
+            const toFormatted = (l) => richToFormattedString(l).trim();
+
+            const mcQs = out.filter(q => q.type === 'mc');
+            const tfQs = out.filter(q => q.type === 'tf');
+            const saQs = out.filter(q => q.type === 'sa');
+
+            let appliedCount = 0;
+
+            sections.forEach(sec => {
+                const blocks = [];
+                let curB = null;
+                sec.lines.forEach((l, i) => {
+                    const p = sec.plains[i];
+                    if (qStartRe.test(p) && !/^\s*[A-Da-dĐ]\s*[\.\)\:\-\/]\s*/.test(p)) {
+                        curB = { lines: [l], plains: [p] };
+                        blocks.push(curB);
+                    } else if (curB) {
+                        curB.lines.push(l);
+                        curB.plains.push(p);
+                    }
+                });
+
+                const targetList = sec.type === 'tf' ? tfQs : (sec.type === 'sa' ? saQs : (sec.type === 'mc' ? mcQs : out));
+
+                blocks.forEach((b, bIdx) => {
+                    const nm = b.plains[0].match(qNumRe);
+                    const num = nm ? parseInt(nm[1], 10) : (bIdx + 1);
+                    const q = targetList[num - 1] || targetList[bIdx];
+                    if (!q) return;
+
+                    if (q.type === 'tf') {
+                        const tfSol = Array.isArray(q.tfSol) ? [...q.tfSol] : ['', '', '', ''];
+                        const tfAns = Array.isArray(q.tfAnswers) ? [...q.tfAnswers] : [false, false, false, false];
+                        let curJ = -1;
+                        let generalLines = [];
+
+                        b.lines.forEach((l, li) => {
+                            if (li === 0) return;
+                            const p = b.plains[li];
+                            if (/^\s*(?:đáp\s*án|lời\s*giải|hướng\s*dẫn)\s*[:\.]?\s*$/i.test(p)) return;
+
+                            const m = p.match(tfMarkerRe);
+                            if (m) {
+                                const j = 'abcd'.indexOf(m[1].toLowerCase());
+                                if (j >= 0) {
+                                    curJ = j;
+                                    tfAns[j] = /^[đĐ]/.test(m[2] || m[3] || '');
+                                    const rest = toFormatted(l).slice(m[0].length).trim();
+                                    if (rest) tfSol[j] = rest;
+                                    return;
+                                }
+                            }
+                            if (curJ >= 0) {
+                                const s = toFormatted(l).trim();
+                                if (s) tfSol[curJ] = (tfSol[curJ] ? tfSol[curJ] + '\n' : '') + s;
+                            } else {
+                                const s = toFormatted(l).trim();
+                                if (s && !/^[a-dA-D]\s*[\.\)]/.test(s)) generalLines.push(s);
+                            }
+                        });
+
+                        if (tfSol.some(Boolean) || generalLines.length > 0) {
+                            q.tfSol = tfSol;
+                            if (generalLines.length > 0 && !q.solution) q.solution = generalLines.join('\n').trim();
+                            if (!q.detectedByStyle && tfAns.some(Boolean)) {
+                                q.tfAnswers = tfAns;
+                                q.detectedByStyle = true;
+                            }
+                            appliedCount++;
+                        }
+                    } else if (q.type === 'sa') {
+                        let ans = '', solLines = [];
+                        let pastAns = false;
+                        b.lines.forEach((l, li) => {
+                            const p = b.plains[li];
+                            const am = p.match(/^\s*(?:đáp\s*án|trả\s*lời|đáp\s*số)\s*[:\.]\s*(.*)$/i);
+                            if (am) {
+                                pastAns = true;
+                                ans = am[1].trim().replace(/\.$/, '');
+                            } else if (pastAns) {
+                                solLines.push(toFormatted(l).trim());
+                            } else if (/^\s*(?:lời\s*giải|hướng\s*dẫn\s*giải)\s*[:\.]?/i.test(p)) {
+                                pastAns = true;
+                            }
+                        });
+                        if (ans && !q.shortAnswer) {
+                            q.shortAnswer = ans.length <= 8 ? ans : ans.slice(0, 4);
+                            q.detectedByStyle = true;
+                        }
+                        if (solLines.length > 0) {
+                            q.solution = solLines.join('\n').trim();
+                            appliedCount++;
+                        } else if (ans && !q.solution) {
+                            q.solution = 'Đáp án: ' + ans;
+                            appliedCount++;
+                        }
+                    } else {
+                        // MC
+                        let pastAns = false, solLines = [];
+                        let detectedAns = '';
+                        b.lines.forEach((l, li) => {
+                            const p = b.plains[li];
+                            const am = p.match(/^\s*(?:đáp\s*án|lời\s*giải|hướng\s*dẫn\s*giải)\s*[:\.]\s*(.*)$/i);
+                            if (am) {
+                                pastAns = true;
+                                const rest = am[1].trim();
+                                const letM = rest.match(/^([A-D])\b/i);
+                                if (letM) {
+                                    detectedAns = letM[1].toUpperCase();
+                                    if (!q.detectedByStyle) {
+                                        const idx = 'ABCD'.indexOf(detectedAns);
+                                        if (idx >= 0) {
+                                            q.correctIndex = idx;
+                                            q.correct = detectedAns;
+                                            q.detectedByStyle = true;
+                                        }
+                                    }
+                                }
+                                if (rest.length > 3) solLines.push(toFormatted(l).replace(/^\s*(?:đáp\s*án|lời\s*giải|hướng\s*dẫn\s*giải)\s*[:\.]\s*/i, '').trim());
+                            } else if (pastAns) {
+                                solLines.push(toFormatted(l).trim());
+                            }
+                        });
+                        if (solLines.length > 0) {
+                            q.solution = solLines.join('\n').trim();
+                            appliedCount++;
+                        } else if (detectedAns && !q.solution) {
+                            q.solution = 'Đáp án: ' + detectedAns;
+                            appliedCount++;
+                        }
+                    }
+                });
+            });
+
+            return appliedCount;
+        }
+
+function parseExamRichLines(richLines) {
             // [MỚI] Trích xuất bảng đáp án toàn diện từ richLines GỐC (khi các bảng line.isTable còn nguyên vẹn)
             let preKeys = null;
             try {
@@ -16818,6 +17301,15 @@ function findVercelStudent(query) {
                 processSection(sec);
                 tagQuestionGroups(out.slice(before), gx.groups);
             });
+
+            // [CODE-SOL] Trích xuất lời giải chi tiết từ phần tail (đuôi đề Word)
+            try {
+                if (tail.length > 0 && typeof extractSolutionsFromTail === 'function') {
+                    extractSolutionsFromTail(tail, out);
+                }
+            } catch (eTailSol) {
+                console.error('[CODE-SOL] Lỗi trích xuất lời giải từ tail:', eTailSol);
+            }
 
             // 3. Báo cáo kiểm tra
             const c = countByType(out);
