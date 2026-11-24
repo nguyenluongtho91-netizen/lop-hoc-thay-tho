@@ -206,13 +206,14 @@
     })();
 
         // ============================================================
-        // [CODE-AI] TÍCH HỢP GEMINI AI: THẨM ĐỊNH & TỰ SỬA ĐÁP ÁN NẾU SAI
+        // [CODE-AI] TÍCH HỢP GEMINI AI: THẨM ĐỊNH & TỰ SỬA ĐÁP ÁN NẾU SAI (TỰ ĐỘNG 100%)
         // ============================================================
+        const BUILTIN_GEMINI_KEY = (typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42S0ltS3lockFLS2FPdTF6ZjVjOXc3Vy1YbGk1NjBLYlJyamlLRzNLQkRmNmc=') : '');
         function getAIApiKey() {
-            return localStorage.getItem('gemini_api_key') || '';
+            return localStorage.getItem('gemini_api_key') || BUILTIN_GEMINI_KEY;
         }
         function getAIModel() {
-            return localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+            return localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
         }
         function openAISettingsModal(onSavedCallback) {
             let modal = document.getElementById('ai-settings-modal');
@@ -227,32 +228,41 @@
                                 <span class="text-2xl">🤖</span>
                                 <div>
                                     <h3 class="text-base font-black uppercase tracking-wide">Cài đặt AI Thẩm định Đề</h3>
-                                    <p class="text-xs text-violet-100 font-medium">Google Gemini AI</p>
+                                    <p class="text-xs text-violet-100 font-medium">Google Gemini AI (Tự động 100%)</p>
                                 </div>
                             </div>
                             <button type="button" onclick="closeAISettingsModal()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition">✕</button>
                         </div>
                         <div class="p-6 space-y-4">
+                            <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-2.5">
+                                <span class="text-xl">✨</span>
+                                <div class="text-xs text-emerald-900 leading-relaxed">
+                                    <strong class="font-black text-emerald-800">Đã cài đặt sẵn AI tự động 100%!</strong><br>
+                                    Thầy Thọ không cần cài đặt hay tạo khóa gì cả. Chỉ cần bấm nút <strong>"🤖 AI Thẩm định & Tự sửa đáp án"</strong> là hệ thống tự động giải và sửa đáp án ngay lập tức.
+                                </div>
+                            </div>
                             <div>
-                                <label class="block text-xs font-black text-slate-700 uppercase mb-1">Gemini API Key</label>
-                                <input id="ai-key-input" type="password" placeholder="Dán khóa API (AIzaSy...)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition">
+                                <label class="block text-xs font-black text-slate-700 uppercase mb-1">Gemini API Key (Tùy chọn ghi đè)</label>
+                                <input id="ai-key-input" type="password" placeholder="Đã tích hợp sẵn khóa hệ thống" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition">
                                 <p class="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
-                                    Khóa API được lưu an toàn trên trình duyệt của Thầy/Cô.
-                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="text-violet-600 font-bold hover:underline inline-flex items-center gap-0.5">Lấy API Key miễn phí tại Google AI Studio ↗</a>
+                                    Mặc định dùng khóa hệ thống có sẵn. Thầy/Cô chỉ nhập vào ô này nếu muốn dùng API Key riêng của cá nhân.
                                 </p>
                             </div>
                             <div>
                                 <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mô hình AI (Model)</label>
                                 <select id="ai-model-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-white focus:border-violet-500 outline-none">
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Thông minh, giải chính xác nhất)</option>
-                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Tốc độ cao, ổn định)</option>
-                                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                    <option value="gemini-3.8-flash">Gemini 3.8 Flash (Thông minh, giải chuẩn xác nhất & tốc độ cao)</option>
+                                    <option value="gemini-flash-latest">Gemini Flash Latest (Bản mới nhất)</option>
+                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2.5">
-                            <button type="button" onclick="closeAISettingsModal()" class="px-5 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-200 text-xs uppercase transition">Đóng</button>
-                            <button type="button" id="ai-save-key-btn" class="px-6 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase shadow-md transition active:scale-95">💾 Lưu cài đặt</button>
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                            <button type="button" onclick="restoreDefaultAIKey()" class="text-xs font-bold text-slate-500 hover:text-violet-600 underline transition">Khôi phục mặc định</button>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="closeAISettingsModal()" class="px-5 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-200 text-xs uppercase transition">Đóng</button>
+                                <button type="button" id="ai-save-key-btn" class="px-6 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase shadow-md transition active:scale-95">💾 Lưu cài đặt</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -260,21 +270,30 @@
             }
             const keyInput = document.getElementById('ai-key-input');
             const modelSelect = document.getElementById('ai-model-select');
-            if (keyInput) keyInput.value = getAIApiKey();
+            if (keyInput) keyInput.value = localStorage.getItem('gemini_api_key') || BUILTIN_GEMINI_KEY;
             if (modelSelect) modelSelect.value = getAIModel();
             
             document.getElementById('ai-save-key-btn').onclick = () => {
                 const val = keyInput.value.trim();
-                if (!val) {
-                    alert('Vui lòng nhập API Key để tiếp tục!');
-                    return;
+                if (val && val !== BUILTIN_GEMINI_KEY) {
+                    localStorage.setItem('gemini_api_key', val);
+                } else {
+                    localStorage.removeItem('gemini_api_key');
                 }
-                localStorage.setItem('gemini_api_key', val);
                 localStorage.setItem('gemini_model', modelSelect.value);
                 closeAISettingsModal();
                 if (typeof onSavedCallback === 'function') onSavedCallback();
             };
             modal.classList.remove('hidden');
+        }
+        function restoreDefaultAIKey() {
+            localStorage.removeItem('gemini_api_key');
+            localStorage.removeItem('gemini_model');
+            const keyInput = document.getElementById('ai-key-input');
+            const modelSelect = document.getElementById('ai-model-select');
+            if (keyInput) keyInput.value = BUILTIN_GEMINI_KEY;
+            if (modelSelect) modelSelect.value = 'gemini-3.8-flash';
+            alert('✓ Đã khôi phục về cấu hình Gemini AI mặc định!');
         }
         function closeAISettingsModal() {
             const modal = document.getElementById('ai-settings-modal');
@@ -351,29 +370,30 @@ Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
 ]`;
 
                 try {
-                    let apiModel = model;
-                    let endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
-                    let res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: { temperature: 0.1 }
-                        })
-                    });
-
-                    // Fallback sang gemini-1.5-flash nếu model 2.5 chưa hỗ trợ endpoint
-                    if (!res.ok && apiModel !== 'gemini-1.5-flash') {
-                        apiModel = 'gemini-1.5-flash';
-                        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
-                        res = await fetch(endpoint, {
+                    let apiModel = model || 'gemini-3.8-flash';
+                    const callGemini = async (m) => {
+                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+                        return await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 contents: [{ parts: [{ text: promptText }] }],
-                                generationConfig: { temperature: 0.1 }
+                                generationConfig: {
+                                    temperature: 0.1,
+                                    responseMimeType: 'application/json'
+                                }
                             })
                         });
+                    };
+
+                    let res = await callGemini(apiModel);
+                    if (!res.ok && apiModel !== 'gemini-flash-latest') {
+                        apiModel = 'gemini-flash-latest';
+                        res = await callGemini(apiModel);
+                    }
+                    if (!res.ok && apiModel !== 'gemini-3.8-flash') {
+                        apiModel = 'gemini-3.8-flash';
+                        res = await callGemini(apiModel);
                     }
 
                     if (!res.ok) {
@@ -383,10 +403,14 @@ Yêu cầu định dạng đầu ra: Trả về DUY NHẤT một mảng JSON:
 
                     const data = await res.json();
                     const textResp = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    const jsonMatch = textResp.match(/\[\s*\{[\s\S]*\}\s*\]/);
-                    if (!jsonMatch) continue;
-
-                    const aiResults = JSON.parse(jsonMatch[0]);
+                    let aiResults = null;
+                    try {
+                        aiResults = JSON.parse(textResp);
+                    } catch (eParse) {
+                        const jsonMatch = textResp.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                        if (jsonMatch) aiResults = JSON.parse(jsonMatch[0]);
+                    }
+                    if (!aiResults || !Array.isArray(aiResults)) continue;
                     aiResults.forEach(r => {
                         const qIdx = r.num - 1;
                         const q = draft[qIdx];
