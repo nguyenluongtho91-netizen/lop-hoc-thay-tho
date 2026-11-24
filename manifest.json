@@ -1,0 +1,25 @@
+{
+  "name": "Lớp Học Thầy Thọ - Quản Lý & Giao Đề Thi",
+  "short_name": "Lớp Học Thầy Thọ",
+  "description": "Ứng dụng quản lý đề thi, giao đề và phòng thi tự học trực tuyến Thầy Nguyễn Lương Thọ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1e3a8a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
